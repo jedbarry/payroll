@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Payroll App — UI Prototype (Light)</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #e8eaed;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 100vh;
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    padding: 32px 16px 48px;
+    color: #1a202c;
+  }
+
+  h1.prototype-label {
+    color: #9ca3af;
+    font-size: 12px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  /* Phone shell */
+  .phone {
+    width: 375px;
+    height: 812px;
+    background: #f2f4f6;
+    border-radius: 44px;
+    overflow: hidden;
+    position: relative;
+    border: 2px solid #d1d5db;
+    box-shadow: 0 0 0 1px #e8eaed, 0 32px 80px rgba(0,0,0,.18);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Status bar */
+  .status-bar {
+    height: 44px;
+    background: #f2f4f6;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    flex-shrink: 0;
+    z-index: 10;
+  }
+  .status-bar .time { font-size: 15px; font-weight: 600; color: #1a202c; }
+  .status-bar .icons { font-size: 13px; color: #6b7280; letter-spacing: 2px; }
+
+  /* Screen area */
+  .screen-area {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Individual screens */
+  .screen {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    background: #f2f4f6;
+    overflow-y: auto;
+  }
+  .screen.active { display: flex; }
+
+  /* Nav header */
+  .nav-header {
+    height: 56px;
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    flex-shrink: 0;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f2f4f6;
+  }
+  .nav-header .back-btn {
+    background: none; border: none; color: #0284c7; font-size: 15px;
+    cursor: pointer; padding: 0; margin-right: 8px; display: flex; align-items: center; gap: 4px;
+  }
+  .nav-header h2 { font-size: 17px; font-weight: 600; color: #111827; flex: 1; }
+  .nav-header .action-btn {
+    background: none; border: none; color: #0284c7; font-size: 15px; cursor: pointer; padding: 0;
+  }
+
+  /* Scrollable content */
+  .scroll-content { flex: 1; overflow-y: auto; padding: 16px; }
+
+  /* Bottom tab bar */
+  .tab-bar {
+    height: 82px;
+    background: #ffffff;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    flex-shrink: 0;
+    padding-bottom: 20px;
+  }
+  .tab-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 8px 0 0;
+    color: #9ca3af;
+    font-size: 10px;
+    letter-spacing: .02em;
+    transition: color .15s;
+  }
+  .tab-item.active { color: #0284c7; }
+  .tab-item svg { width: 22px; height: 22px; }
+
+  /* Cards */
+  .card {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    transition: background .15s;
+    border: 1px solid #e5e7eb;
+  }
+  .card:hover { background: #f9fafb; }
+  .card-row { display: flex; align-items: center; justify-content: space-between; }
+  .card-title { font-size: 15px; font-weight: 600; color: #111827; }
+  .card-sub { font-size: 13px; color: #6b7280; margin-top: 3px; }
+  .card-badge {
+    font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 20px;
+  }
+  .badge-active { background: #dcfce7; color: #166534; }
+  .badge-draft { background: #ede9fe; color: #5b21b6; }
+  .badge-committed { background: #dbeafe; color: #1d4ed8; }
+
+  /* Chevron */
+  .chev { color: #d1d5db; font-size: 18px; }
+
+  /* Section label */
+  .section-label {
+    font-size: 11px; font-weight: 700; letter-spacing: .08em;
+    text-transform: uppercase; color: #9ca3af; margin: 8px 0 10px;
+  }
+
+  /* FAB */
+  .fab {
+    position: absolute; bottom: 16px; right: 16px;
+    width: 52px; height: 52px; border-radius: 26px;
+    background: #0284c7; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 16px rgba(2,132,199,.3);
+    transition: background .15s;
+  }
+  .fab:hover { background: #0369a1; }
+  .fab svg { width: 24px; height: 24px; color: #ffffff; }
+
+  /* Form elements */
+  .form-group { margin-bottom: 16px; }
+  .form-label { font-size: 12px; font-weight: 600; color: #6b7280; margin-bottom: 6px; display: block; letter-spacing: .05em; text-transform: uppercase; }
+  .form-input, .form-select {
+    width: 100%; background: #ffffff; border: 1px solid #d1d5db;
+    border-radius: 10px; padding: 12px 14px; font-size: 15px; color: #111827;
+    outline: none; appearance: none; -webkit-appearance: none;
+  }
+  .form-input:focus, .form-select:focus { border-color: #0284c7; }
+  .form-select-wrap { position: relative; }
+  .form-select-wrap::after { content: '▾'; position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: #9ca3af; pointer-events: none; }
+
+  /* Primary button */
+  .btn-primary {
+    width: 100%; padding: 14px; border-radius: 12px;
+    background: #0284c7; border: none; color: #ffffff;
+    font-size: 16px; font-weight: 700; cursor: pointer;
+    transition: background .15s;
+  }
+  .btn-primary:hover { background: #0369a1; }
+  .btn-secondary {
+    width: 100%; padding: 13px; border-radius: 12px;
+    background: transparent; border: 1.5px solid #d1d5db; color: #6b7280;
+    font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 10px;
+    transition: border-color .15s;
+  }
+  .btn-secondary:hover { border-color: #9ca3af; }
+  .btn-danger {
+    width: 100%; padding: 13px; border-radius: 12px;
+    background: transparent; border: 1.5px solid #fca5a5; color: #dc2626;
+    font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 10px;
+  }
+
+  /* Divider */
+  .divider { height: 1px; background: #e5e7eb; margin: 16px 0; }
+
+  /* Line item row */
+  .line-item-row {
+    display: flex; align-items: center; gap: 10px;
+    background: #ffffff; border-radius: 10px; padding: 12px 14px; margin-bottom: 8px;
+    border: 1px solid #e5e7eb;
+  }
+  .li-dot { width: 8px; height: 8px; border-radius: 4px; flex-shrink: 0; }
+  .li-dot.inclusion { background: #16a34a; }
+  .li-dot.deduction { background: #dc2626; }
+  .li-label { flex: 1; font-size: 14px; color: #374151; }
+  .li-amount { font-size: 14px; font-weight: 600; }
+  .li-amount.inclusion { color: #16a34a; }
+  .li-amount.deduction { color: #dc2626; }
+  .li-remove { background: none; border: none; color: #d1d5db; cursor: pointer; font-size: 18px; line-height: 1; }
+  .li-remove:hover { color: #dc2626; }
+
+  /* Pay summary box */
+  .pay-summary {
+    background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 14px; padding: 16px; margin-bottom: 16px;
+  }
+  .pay-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; }
+  .pay-row .lbl { font-size: 13px; color: #6b7280; }
+  .pay-row .val { font-size: 13px; color: #374151; font-weight: 500; }
+  .pay-row.net .lbl { font-size: 15px; color: #111827; font-weight: 700; }
+  .pay-row.net .val { font-size: 18px; color: #0284c7; font-weight: 700; }
+  .pay-divider { height: 1px; background: #e5e7eb; margin: 10px 0; }
+
+  /* Payslip detail header */
+  .payslip-header {
+    background: #ffffff; border-radius: 14px; padding: 20px; margin-bottom: 16px; text-align: center;
+    border: 1px solid #e5e7eb;
+  }
+  .payslip-header .company { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: #9ca3af; margin-bottom: 6px; }
+  .payslip-header .emp-name { font-size: 20px; font-weight: 700; color: #111827; margin-bottom: 4px; }
+  .payslip-header .period { font-size: 13px; color: #6b7280; }
+  .payslip-header .net-amount { font-size: 36px; font-weight: 800; color: #0284c7; margin-top: 12px; }
+  .payslip-header .net-label { font-size: 11px; color: #9ca3af; text-transform: uppercase; letter-spacing: .08em; }
+
+  /* Empty state */
+  .empty-state { text-align: center; padding: 48px 24px; color: #9ca3af; font-size: 14px; }
+  .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+
+  /* Toggle */
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; }
+  .toggle-label { font-size: 15px; color: #374151; }
+  .toggle {
+    width: 48px; height: 28px; border-radius: 14px; background: #d1d5db; position: relative;
+    cursor: pointer; border: none; transition: background .2s;
+  }
+  .toggle.on { background: #0284c7; }
+  .toggle::after {
+    content: ''; position: absolute; top: 3px; left: 3px;
+    width: 22px; height: 22px; border-radius: 11px; background: #fff;
+    transition: transform .2s;
+  }
+  .toggle.on::after { transform: translateX(20px); }
+
+  /* Sync status */
+  .sync-status { background: #ffffff; border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; border: 1px solid #e5e7eb; }
+  .sync-row { display: flex; align-items: center; gap: 10px; }
+  .sync-dot { width: 8px; height: 8px; border-radius: 4px; background: #16a34a; }
+  .sync-text { font-size: 13px; color: #6b7280; }
+
+  /* Add line item inline form */
+  .add-li-form { background: #f9fafb; border: 1px dashed #d1d5db; border-radius: 10px; padding: 12px; margin-bottom: 12px; }
+  .add-li-row { display: flex; gap: 8px; margin-top: 8px; }
+  .add-li-row .form-input { flex: 1; padding: 10px 12px; font-size: 14px; }
+  .btn-add-li {
+    padding: 10px 14px; border-radius: 10px; background: #dbeafe; border: none;
+    color: #1d4ed8; font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+
+  /* Segmented control */
+  .seg-control { display: flex; background: #e5e7eb; border-radius: 10px; padding: 3px; margin-bottom: 16px; }
+  .seg-btn {
+    flex: 1; padding: 8px; border: none; border-radius: 8px; background: transparent;
+    color: #9ca3af; font-size: 14px; font-weight: 600; cursor: pointer; transition: all .15s;
+  }
+  .seg-btn.active { background: #ffffff; color: #0284c7; }
+</style>
+</head>
+<body>
+<p class="prototype-label">UI/UX Prototype — Mobile Payroll App (Light)</p>
+
+<div class="phone">
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <span class="time">9:41</span>
+    <span class="icons">●●● WiFi 100%</span>
+  </div>
+
+  <!-- Screen Area -->
+  <div class="screen-area">
+
+    <!-- ══════════════════════════════════════════════════════
+         SCREEN: Employee List
+    ══════════════════════════════════════════════════════ -->
+    <div class="screen active" id="s-emp-list">
+      <div class="nav-header">
+        <h2>Employees</h2>
+        <button class="action-btn" onclick="show('s-emp-form-add')">+ Add</button>
+      </div>
+      <div class="scroll-content" style="position:relative;padding-bottom:80px">
+        <p class="section-label">Active (4)</p>
+
+        <div class="card" onclick="show('s-emp-form-edit')">
+          <div class="card-row">
+            <div>
+              <div class="card-title">Sarah Mitchell</div>
+              <div class="card-sub">$4,000 / mo · Monthly · 15th</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span class="card-badge badge-active">Active</span>
+              <span class="chev">›</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" onclick="show('s-emp-form-edit')">
+          <div class="card-row">
+            <div>
+              <div class="card-title">James Okafor</div>
+              <div class="card-sub">$2,800 / mo · Weekly · Fridays</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span class="card-badge badge-active">Active</span>
+              <span class="chev">›</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" onclick="show('s-emp-form-edit')">
+          <div class="card-row">
+            <div>
+              <div class="card-title">Priya Nair</div>
+              <div class="card-sub">$6,500 / mo · Monthly · 1st</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span class="card-badge badge-active">Active</span>
+              <span class="chev">›</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" onclick="show('s-emp-form-edit')">
+          <div class="card-row">
+            <div>
+              <div class="card-title">Tom Harrington</div>
+              <div class="card-sub">$3,200 / mo · Bi-weekly · 1st &amp; 15th</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span class="card-badge badge-active">Active</span>
+              <span class="chev">›</span>
+            </div>
+          </div>
+        </div>
+
+        <p class="section-label" style="margin-top:8px">Archived (1)</p>
+        <div class="card" style="opacity:.5">
+          <div class="card-row">
+            <div>
+              <div class="card-title">Luke Ferreira</div>
+              <div class="card-sub">$18.00 / hr · Weekly</div>
+            </div>
+            <span style="font-size:12px;color:#9ca3af">Archived</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════
+         SCREEN: Employee Form — Add
+    ══════════════════════════════════════════════════════ -->
+    <div class="screen" id="s-emp-form-add">
+      <div class="nav-header">
+        <button class="back-btn" onclick="show('s-emp-list')">‹ Back</button>
+        <h2>New Employee</h2>
+      </div>
+      <div class="scroll-content">
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input class="form-input" type="text" placeholder="e.g. Alex Johnson" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Monthly Rate ($)</label>
+          <input class="form-input" type="number" placeholder="0.00" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Pay Schedule</label>
+          <div class="form-select-wrap">
+            <select class="form-select" onchange="updatePayDayAdd(this)">
+              <option value="monthly" selected>Monthly</option>
+              <option value="biweekly">Bi-weekly</option>
+              <option value="weekly">Weekly (every Friday)</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group" id="add-payday-group">
+          <label class="form-label">Payment Day</label>
+          <div class="form-select-wrap">
+            <select class="form-select" id="add-payday-select">
+              <option>1st of month</option>
+              <option>15th of month</option>
+              <option>Last day of month</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-top:24px">
+          <button class="btn-primary" onclick="show('s-emp-list')">Save Employee</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════
+         SCREEN: Employee Form — Edit
+    ══════════════════════════════════════════════════════ -->
+    <div class="screen" id="s-emp-form-edit">
+      <div class="nav-header">
+        <button class="back-btn" onclick="show('s-emp-list')">‹ Back</button>
+        <h2>Edit Employee</h2>
+      </div>
+      <div class="scroll-content">
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input class="form-input" type="text" value="Sarah Mitchell" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Monthly Rate ($)</label>
+          <input class="form-input" type="number" value="4,000.00" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Pay Schedule</label>
+          <div class="form-select-wrap">
+            <select class="form-select" onchange="updatePayDayEdit(this)">
+              <option value="monthly" selected>Monthly</option>
+              <option value="biweekly">Bi-weekly</option>
+              <option value="weekly">Weekly (every Friday)</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group" id="edit-payday-group">
+          <label class="form-label">Payment Day</label>
+          <div class="form-select-wrap">
+            <select class="form-select" id="edit-payday-select">
+              <option>1st of month</option>
+              <option selected>15th of month</option>
+              <option>Last day of month</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-top:4px">
+          <button class="btn-primary" onclick="show('s-emp-list')">Save Changes</button>
+          <button class="btn-secondary" onclick="show('s-payroll-run-list')">Run History &amp; New Run</button>
+          <button class="btn-danger">Archive Employee</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════
+         SCREEN: Run History (per employee, under Employees stack)
+    ══════════════════════════════════════════════════════ -->
+    <div class="screen" id="s-payroll-run-list">
+      <div class="nav-header">
+        <button class="back-btn" onclick="show('s-emp-form-edit')">‹ Sarah Mitchell</button>
+        <h2>Run History</h2>
+        <button class="action-btn" onclick="show('s-payroll-form')">+ Run</button>
+      </div>
+      <div class="scroll-content">
+        <!-- Draft card -->
+        <div class="card" style="border:1px dashed #c4b5fd;background:#faf5ff;" onclick="show('s-payroll-form')">
+          <div class="card-row">
+            <div>
+              <div class="card-title" style="color:#7c3aed;">Draft Run</div>
+              <div class="card-sub" style="color:#8b5cf6;">Jul 1 – Jul 14, 2025 · in progress</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span class="card-badge badge-draft">Draft</span>
+              <span class="chev" style="color:#c4b5fd">›</span>
+            </div>
+          </div>
+        </div>
+
+        <p class="section-label" style="margin-top:8px">Committed</p>
+
+        <div class="card" onclick="show('s-payslip-detail')">
+          <div class="card-row">
+            <div>
+              <div class="card-title">Jun 17 – Jun 30, 2025</div>
+              <div class="card-sub">Jun 17 – 30 · Net $2,150.00</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span class="card-badge badge-committed">Committed</span>
+              <span class="chev">›</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" onclick="show('s-payslip-detail')">
+          <div class="card-row">
+            <div>
+              <div class="card-title">Jun 3 – Jun 16, 2025</div>
+              <div class="card-sub">Jun 3 – 16 · Net $2,000.00</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span class="card-badge badge-committed">Committed</span>
+              <span class="chev">›</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" onclick="show('s-payslip-detail')">
+          <div class="card-row">
+            <div>
+              <div class="card-title">May 20 – Jun 2, 2025</div>
+              <div class="card-sub">May 20 – Jun 2 · Net $2,000.00</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span class="card-badge badge-committed">Committed</span>
+              <span class="chev">›</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════
+         SCREEN: Payroll Run Form
+    ══════════════════════════════════════════════════════ -->
+    <div class="screen" id="s-payroll-form">
+      <div class="nav-header">
+        <button class="back-btn" onclick="show('s-payroll-run-list')">‹ Run History</button>
+        <h2>Payroll Run</h2>
+      </div>
+      <div class="scroll-content">
+        <!-- Period + employee info bar -->
+        <div style="background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;margin-bottom:16px;display:flex;justify-content:space-between">
+          <div>
+            <div style="font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em">Period</div>
+            <div style="font-size:14px;color:#111827;margin-top:2px">Jul 1 – Jul 31, 2025</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em">Employee</div>
+            <div style="font-size:14px;color:#111827;margin-top:2px">Sarah Mitchell</div>
+          </div>
+        </div>
+
+        <!-- Base amount — read-only computed field -->
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;margin-bottom:16px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <div style="font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">Base Amount</div>
+              <div style="font-size:12px;color:#d1d5db;">Monthly rate · 1 payment</div>
+            </div>
+            <div style="font-size:20px;font-weight:700;color:#6b7280;">$4,000.00</div>
+          </div>
+        </div>
+
+        <div class="pay-summary" id="pay-summary-box">
+          <div class="pay-row">
+            <span class="lbl">Base Pay</span>
+            <span class="val" id="gross-val">$4,000.00</span>
+          </div>
+          <div class="pay-divider"></div>
+          <div class="pay-row">
+            <span class="lbl" style="color:#16a34a">+ Performance Bonus</span>
+            <span class="val" style="color:#16a34a">+$200.00</span>
+          </div>
+          <div class="pay-row">
+            <span class="lbl" style="color:#dc2626">− Equipment Rental</span>
+            <span class="val" style="color:#dc2626">−$50.00</span>
+          </div>
+          <div class="pay-divider"></div>
+          <div class="pay-row net">
+            <span class="lbl">Net Pay</span>
+            <span class="val" id="net-val">$4,150.00</span>
+          </div>
+        </div>
+
+        <p class="section-label">Line Items</p>
+
+        <div class="seg-control">
+          <button class="seg-btn active" id="seg-inclusion" onclick="setSeg('inclusion')">+ Inclusion</button>
+          <button class="seg-btn" id="seg-deduction" onclick="setSeg('deduction')">− Deduction</button>
+        </div>
+
+        <div class="add-li-form">
+          <div class="form-group" style="margin-bottom:8px">
+            <label class="form-label">Label</label>
+            <input class="form-input" type="text" placeholder="e.g. Bonus, Uniform allowance…" id="li-label-input" />
+          </div>
+          <div class="add-li-row">
+            <input class="form-input" type="number" placeholder="Amount" id="li-amount-input" />
+            <button class="btn-add-li" onclick="addLineItem()">Add</button>
+          </div>
+        </div>
+
+        <div id="line-items-container">
+          <div class="line-item-row">
+            <div class="li-dot inclusion"></div>
+            <span class="li-label">Performance Bonus</span>
+            <span class="li-amount inclusion">+$200.00</span>
+            <button class="li-remove">×</button>
+          </div>
+          <div class="line-item-row">
+            <div class="li-dot deduction"></div>
+            <span class="li-label">Equipment Rental</span>
+            <span class="li-amount deduction">−$50.00</span>
+            <button class="li-remove">×</button>
+          </div>
+        </div>
+
+        <div style="margin-top:24px">
+          <button class="btn-primary" onclick="show('s-payslip-detail')">Commit Payroll Run</button>
+          <button class="btn-secondary" onclick="show('s-payroll-list')">Save as Draft</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════
+         SCREEN: Payslips — Archive (JS-driven, filterable)
+    ══════════════════════════════════════════════════════ -->
+    <div class="screen" id="s-payslip-list">
+      <div style="background:#ffffff;padding:16px 20px 14px;border-bottom:1px solid #e5e7eb;flex-shrink:0;">
+        <div id="ps-header-label" style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#d1d5db;margin-bottom:10px;">2026 Pay Records</div>
+        <div style="display:flex;gap:8px;margin-bottom:8px;">
+          <div style="flex:1;background:#f9fafb;border-radius:10px;padding:10px 12px;border:1px solid #e5e7eb;">
+            <div style="font-size:10px;color:#d1d5db;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">Year to Date</div>
+            <div id="ps-stat-ytd" style="font-size:17px;font-weight:700;color:#6b7280;">$23,335</div>
+          </div>
+          <div style="flex:1;background:#f9fafb;border-radius:10px;padding:10px 12px;border:1px solid #e5e7eb;">
+            <div id="ps-stat-month-label" style="font-size:10px;color:#d1d5db;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">July</div>
+            <div id="ps-stat-month" style="font-size:17px;font-weight:700;color:#6b7280;">$855</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <div style="flex:1;background:#f9fafb;border-radius:8px;padding:8px 10px;border:1px solid #e5e7eb;">
+            <div style="font-size:9px;color:#d1d5db;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">Q1</div>
+            <div id="ps-q1" style="font-size:13px;font-weight:700;color:#d1d5db;">—</div>
+          </div>
+          <div style="flex:1;background:#f9fafb;border-radius:8px;padding:8px 10px;border:1px solid #e5e7eb;">
+            <div style="font-size:9px;color:#d1d5db;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">Q2</div>
+            <div id="ps-q2" style="font-size:13px;font-weight:700;color:#6b7280;">$6,240</div>
+          </div>
+          <div style="flex:1;background:#f9fafb;border-radius:8px;padding:8px 10px;border:1px solid #bfdbfe;">
+            <div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">Q3</div>
+            <div id="ps-q3" style="font-size:13px;font-weight:700;color:#374151;">$17,095</div>
+          </div>
+          <div style="flex:1;background:#f9fafb;border-radius:8px;padding:8px 10px;border:1px solid #e5e7eb;">
+            <div style="font-size:9px;color:#d1d5db;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">Q4</div>
+            <div id="ps-q4" style="font-size:13px;font-weight:700;color:#d1d5db;">—</div>
+          </div>
+        </div>
+      </div>
+      <div class="scroll-content">
+        <div id="ps-pills" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;"></div>
+        <div id="ps-list"></div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════
+         SCREEN: Payslip Detail
+    ══════════════════════════════════════════════════════ -->
+    <div class="screen" id="s-payslip-detail">
+      <div class="nav-header">
+        <button class="back-btn" onclick="show('s-payslip-list')">‹ Payslips</button>
+        <h2>Payslip</h2>
+      </div>
+      <div class="scroll-content">
+        <div class="payslip-header">
+          <div class="company">Acme Small Business</div>
+          <div class="emp-name">Sarah Mitchell</div>
+          <div class="period">Jun 17 – Jun 30, 2025 · Bi-weekly · 2 of 2</div>
+          <div class="net-amount">$2,150.00</div>
+          <div class="net-label">Net Pay</div>
+        </div>
+
+        <p class="section-label">Earnings</p>
+        <div class="line-item-row">
+          <div class="li-dot inclusion"></div>
+          <span class="li-label">Base Pay (monthly $4,000 ÷ 2)</span>
+          <span class="li-amount inclusion">+$2,000.00</span>
+        </div>
+        <div class="line-item-row">
+          <div class="li-dot inclusion"></div>
+          <span class="li-label">Performance Bonus</span>
+          <span class="li-amount inclusion">+$200.00</span>
+        </div>
+
+        <p class="section-label" style="margin-top:12px">Deductions</p>
+        <div class="line-item-row">
+          <div class="li-dot deduction"></div>
+          <span class="li-label">Equipment Rental</span>
+          <span class="li-amount deduction">−$50.00</span>
+        </div>
+        <div class="line-item-row">
+          <div class="li-dot deduction"></div>
+          <span class="li-label">Uniform</span>
+          <span class="li-amount deduction">−$210.00</span>
+        </div>
+
+        <div class="divider"></div>
+        <div class="pay-summary">
+          <div class="pay-row"><span class="lbl">Base Pay</span><span class="val">$2,000.00</span></div>
+          <div class="pay-row"><span class="lbl" style="color:#16a34a">Total Inclusions</span><span class="val" style="color:#16a34a">+$200.00</span></div>
+          <div class="pay-row"><span class="lbl" style="color:#dc2626">Total Deductions</span><span class="val" style="color:#dc2626">−$50.00</span></div>
+          <div class="pay-divider"></div>
+          <div class="pay-row net"><span class="lbl">Net Pay</span><span class="val">$2,150.00</span></div>
+        </div>
+
+        <div style="margin-top:4px;background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+            <span style="font-size:12px;color:#9ca3af">Generated</span>
+            <span style="font-size:12px;color:#6b7280">Jul 1, 2025 · 9:14 AM</span>
+          </div>
+          <div style="display:flex;justify-content:space-between">
+            <span style="font-size:12px;color:#9ca3af">Status</span>
+            <span class="card-badge badge-committed" style="font-size:11px">Committed</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════
+         SCREEN: Sync
+    ══════════════════════════════════════════════════════ -->
+    <div class="screen" id="s-sync">
+      <div class="nav-header">
+        <h2>S3 Sync</h2>
+      </div>
+      <div class="scroll-content">
+        <div class="sync-status">
+          <div class="sync-row">
+            <div class="sync-dot"></div>
+            <span class="sync-text">Last export: Jul 1, 2025 · 8:02 AM</span>
+          </div>
+        </div>
+
+        <p class="section-label">S3 Configuration</p>
+        <div class="form-group">
+          <label class="form-label">AWS Region</label>
+          <input class="form-input" type="text" value="us-east-1" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">S3 Bucket</label>
+          <input class="form-input" type="text" value="my-payroll-backup" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Access Key ID</label>
+          <input class="form-input" type="text" value="AKIA••••••••••••••••" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Secret Access Key</label>
+          <input class="form-input" type="password" value="••••••••••••••••••••" />
+        </div>
+
+        <div class="divider"></div>
+
+        <button class="btn-primary" style="margin-bottom:10px">
+          ↑ Export to S3
+        </button>
+        <button class="btn-secondary" style="border-color:#fca5a5;color:#dc2626;">
+          ↓ Import from S3 (overwrites local data)
+        </button>
+
+        <div style="margin-top:20px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:14px 16px">
+          <p style="font-size:12px;color:#92400e;line-height:1.6">
+            Export saves a full JSON snapshot of all employees, payroll runs, line items, and payslips to your S3 bucket.
+            Import <strong style="color:#dc2626">overwrites all local data</strong> — use only to restore on a new device.
+          </p>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /screen-area -->
+
+  <!-- Bottom Tab Bar — 3 tabs -->
+  <div class="tab-bar">
+    <button class="tab-item active" id="tab-emp" onclick="goTab('emp')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+      Employees
+    </button>
+    <button class="tab-item" id="tab-payslips" onclick="goTab('payslips')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+      </svg>
+      Payslips
+    </button>
+    <button class="tab-item" id="tab-sync" onclick="goTab('sync')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+      </svg>
+      Sync
+    </button>
+  </div>
+</div>
+
+<script>
+  // ── Navigation ──────────────────────────────────────────
+  const tabScreens = { emp: 's-emp-list', payslips: 's-payslip-list', sync: 's-sync' };
+  let activeTab = 'emp';
+
+  function show(screenId) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    const t = document.getElementById(screenId);
+    if (t) t.classList.add('active');
+  }
+  function goTab(tab) {
+    activeTab = tab;
+    document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+    const el = document.getElementById('tab-' + tab);
+    if (el) el.classList.add('active');
+    show(tabScreens[tab]);
+  }
+
+  // ── Employee form — pay-day config picker ───────────────
+  function updatePayDayOptions(schedule, selectId) {
+    const sel = document.getElementById(selectId);
+    sel.innerHTML = '';
+    if (schedule === 'monthly') {
+      ['1st of month','15th of month','Last day of month'].forEach(o => {
+        const opt = document.createElement('option'); opt.text = o; sel.add(opt);
+      });
+    } else if (schedule === 'biweekly') {
+      ['1st & 15th','15th & last day'].forEach(o => {
+        const opt = document.createElement('option'); opt.text = o; sel.add(opt);
+      });
+    }
+  }
+  function updatePayDayAdd(el) {
+    const grp = document.getElementById('add-payday-group');
+    grp.style.display = el.value === 'weekly' ? 'none' : '';
+    if (el.value !== 'weekly') updatePayDayOptions(el.value, 'add-payday-select');
+  }
+  function updatePayDayEdit(el) {
+    const grp = document.getElementById('edit-payday-group');
+    grp.style.display = el.value === 'weekly' ? 'none' : '';
+    if (el.value !== 'weekly') updatePayDayOptions(el.value, 'edit-payday-select');
+  }
+
+  let segType = 'inclusion';
+  function setSeg(type) {
+    segType = type;
+    document.getElementById('seg-inclusion').classList.toggle('active', type === 'inclusion');
+    document.getElementById('seg-deduction').classList.toggle('active', type === 'deduction');
+  }
+  function addLineItem() {
+    const label = document.getElementById('li-label-input').value.trim();
+    const amount = parseFloat(document.getElementById('li-amount-input').value) || 0;
+    if (!label || !amount) return;
+    const row = document.createElement('div');
+    row.className = 'line-item-row';
+    const sign = segType === 'inclusion' ? '+' : '−';
+    row.innerHTML = '<div class="li-dot ' + segType + '"></div><span class="li-label">' + label + '</span><span class="li-amount ' + segType + '">' + sign + '$' + amount.toFixed(2) + '</span><button class="li-remove" onclick="this.parentElement.remove()">×</button>';
+    document.getElementById('line-items-container').appendChild(row);
+    document.getElementById('li-label-input').value = '';
+    document.getElementById('li-amount-input').value = '';
+  }
+
+  // ── Payslip filter data ─────────────────────────────────
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const EMPLOYEES = [
+    { key: 'all',  label: 'All' },
+    { key: 'SM',   label: 'Sarah M.',  full: 'Sarah Mitchell' },
+    { key: 'JO',   label: 'James O.',  full: 'James Okafor' },
+    { key: 'PN',   label: 'Priya N.',  full: 'Priya Nair' },
+    { key: 'TH',   label: 'Tom H.',    full: 'Tom Harrington' }
+  ];
+
+  // month = 0-based (0=Jan … 9=Oct) — year 2026, first week starts Dec 29 2025
+  // 5-week months: Jan(5), Apr(5), Jul(5), Sep(5). 4-week months: Feb,Mar,May,Jun,Aug,Oct.
+  const SLIPS = [
+    // ── OCTOBER 2026 (month 9) — 4 work-weeks → $700 ──────────
+    { emp:'JO', month:9, period:'Oct 26 – Oct 30', schedule:'Weekly 4/4', net:700  },
+    { emp:'JO', month:9, period:'Oct 19 – Oct 23', schedule:'Weekly 3/4', net:700  },
+    { emp:'JO', month:9, period:'Oct 12 – Oct 16', schedule:'Weekly 2/4', net:700  },
+    { emp:'JO', month:9, period:'Oct 5 – Oct 9',   schedule:'Weekly 1/4', net:700  },
+    { emp:'PN', month:9, period:'Oct 1 – Oct 31',  schedule:'Monthly',        net:6500 },
+    { emp:'SM', month:9, period:'Oct 15 – Oct 31', schedule:'Bi-weekly 2/2',  net:2000 },
+    { emp:'SM', month:9, period:'Oct 1 – Oct 14',  schedule:'Bi-weekly 1/2',  net:2000 },
+    { emp:'TH', month:9, period:'Oct 15 – Oct 31', schedule:'Bi-weekly 2/2',  net:1600 },
+    { emp:'TH', month:9, period:'Oct 1 – Oct 14',  schedule:'Bi-weekly 1/2',  net:1600 },
+
+    // ── SEPTEMBER 2026 (month 8) — 5 work-weeks → $560 ────────
+    { emp:'JO', month:8, period:'Sep 28 – Oct 2',  schedule:'Weekly 5/5', net:560  },
+    { emp:'JO', month:8, period:'Sep 21 – Sep 25', schedule:'Weekly 4/5', net:560  },
+    { emp:'JO', month:8, period:'Sep 14 – Sep 18', schedule:'Weekly 3/5', net:560  },
+    { emp:'JO', month:8, period:'Sep 7 – Sep 11',  schedule:'Weekly 2/5', net:560  },
+    { emp:'JO', month:8, period:'Aug 31 – Sep 4',  schedule:'Weekly 1/5', net:560  },
+    { emp:'PN', month:8, period:'Sep 1 – Sep 30',  schedule:'Monthly',        net:6500 },
+    { emp:'SM', month:8, period:'Sep 15 – Sep 30', schedule:'Bi-weekly 2/2',  net:2000 },
+    { emp:'SM', month:8, period:'Sep 1 – Sep 14',  schedule:'Bi-weekly 1/2',  net:2000 },
+    { emp:'TH', month:8, period:'Sep 15 – Sep 30', schedule:'Bi-weekly 2/2',  net:1600 },
+    { emp:'TH', month:8, period:'Sep 1 – Sep 14',  schedule:'Bi-weekly 1/2',  net:1600 },
+
+    // ── AUGUST 2026 (month 7) — 4 work-weeks → $700 ───────────
+    { emp:'JO', month:7, period:'Aug 24 – Aug 28', schedule:'Weekly 4/4', net:700  },
+    { emp:'JO', month:7, period:'Aug 17 – Aug 21', schedule:'Weekly 3/4', net:700  },
+    { emp:'JO', month:7, period:'Aug 10 – Aug 14', schedule:'Weekly 2/4', net:700  },
+    { emp:'JO', month:7, period:'Aug 3 – Aug 7',   schedule:'Weekly 1/4', net:700  },
+    { emp:'PN', month:7, period:'Aug 1 – Aug 31',  schedule:'Monthly',        net:6500 },
+    { emp:'SM', month:7, period:'Aug 15 – Aug 31', schedule:'Bi-weekly 2/2',  net:2000 },
+    { emp:'SM', month:7, period:'Aug 1 – Aug 14',  schedule:'Bi-weekly 1/2',  net:1850 },
+    { emp:'TH', month:7, period:'Aug 15 – Aug 31', schedule:'Bi-weekly 2/2',  net:1600 },
+    { emp:'TH', month:7, period:'Aug 1 – Aug 14',  schedule:'Bi-weekly 1/2',  net:1600 },
+
+    // ── JULY 2026 (month 6) — 5 work-weeks → $560 ─────────────
+    { emp:'JO', month:6, period:'Jul 27 – Jul 31', schedule:'Weekly 5/5', net:560  },
+    { emp:'JO', month:6, period:'Jul 20 – Jul 24', schedule:'Weekly 4/5', net:560  },
+    { emp:'JO', month:6, period:'Jul 13 – Jul 17', schedule:'Weekly 3/5', net:560  },
+    { emp:'JO', month:6, period:'Jul 6 – Jul 10',  schedule:'Weekly 2/5', net:560  },
+    { emp:'JO', month:6, period:'Jun 29 – Jul 3',  schedule:'Weekly 1/5', net:560  },
+    { emp:'PN', month:6, period:'Jul 1 – Jul 31',  schedule:'Monthly',        net:6500 },
+    { emp:'SM', month:6, period:'Jul 15 – Jul 31', schedule:'Bi-weekly 2/2',  net:2000 },
+    { emp:'SM', month:6, period:'Jul 1 – Jul 14',  schedule:'Bi-weekly 1/2',  net:2000 },
+    { emp:'TH', month:6, period:'Jul 15 – Jul 31', schedule:'Bi-weekly 2/2',  net:1600 },
+    { emp:'TH', month:6, period:'Jul 1 – Jul 14',  schedule:'Bi-weekly 1/2',  net:1600 },
+
+    // ── JUNE 2026 (month 5) — 4 work-weeks → $700 ─────────────
+    { emp:'JO', month:5, period:'Jun 22 – Jun 26', schedule:'Weekly 4/4', net:700  },
+    { emp:'JO', month:5, period:'Jun 15 – Jun 19', schedule:'Weekly 3/4', net:700  },
+    { emp:'JO', month:5, period:'Jun 8 – Jun 12',  schedule:'Weekly 2/4', net:700  },
+    { emp:'JO', month:5, period:'Jun 1 – Jun 5',   schedule:'Weekly 1/4', net:700  },
+    { emp:'PN', month:5, period:'Jun 1 – Jun 30',  schedule:'Monthly',        net:6500 },
+    { emp:'SM', month:5, period:'Jun 15 – Jun 30', schedule:'Bi-weekly 2/2',  net:2150 },
+    { emp:'SM', month:5, period:'Jun 1 – Jun 14',  schedule:'Bi-weekly 1/2',  net:2000 },
+    { emp:'TH', month:5, period:'Jun 15 – Jun 30', schedule:'Bi-weekly 2/2',  net:1600 },
+    { emp:'TH', month:5, period:'Jun 1 – Jun 14',  schedule:'Bi-weekly 1/2',  net:1600 },
+
+    // ── MAY 2026 (month 4) — 4 work-weeks → $700 ─────────────
+    { emp:'JO', month:4, period:'May 25 – May 29', schedule:'Weekly 4/4', net:700  },
+    { emp:'JO', month:4, period:'May 18 – May 22', schedule:'Weekly 3/4', net:700  },
+    { emp:'JO', month:4, period:'May 11 – May 15', schedule:'Weekly 2/4', net:700  },
+    { emp:'JO', month:4, period:'May 4 – May 8',   schedule:'Weekly 1/4', net:700  },
+    { emp:'PN', month:4, period:'May 1 – May 31',  schedule:'Monthly',        net:6500 },
+    { emp:'SM', month:4, period:'May 15 – May 31', schedule:'Bi-weekly 2/2',  net:2000 },
+    { emp:'SM', month:4, period:'May 1 – May 14',  schedule:'Bi-weekly 1/2',  net:2000 },
+    { emp:'TH', month:4, period:'May 15 – May 31', schedule:'Bi-weekly 2/2',  net:1600 },
+    { emp:'TH', month:4, period:'May 1 – May 14',  schedule:'Bi-weekly 1/2',  net:1600 },
+
+    // ── APRIL 2026 (month 3) — 5 work-weeks → $560 ────────────
+    { emp:'JO', month:3, period:'Apr 27 – May 1',  schedule:'Weekly 5/5', net:560  },
+    { emp:'JO', month:3, period:'Apr 20 – Apr 24', schedule:'Weekly 4/5', net:560  },
+    { emp:'JO', month:3, period:'Apr 13 – Apr 17', schedule:'Weekly 3/5', net:560  },
+    { emp:'JO', month:3, period:'Apr 6 – Apr 10',  schedule:'Weekly 2/5', net:560  },
+    { emp:'JO', month:3, period:'Mar 30 – Apr 3',  schedule:'Weekly 1/5', net:560  },
+    { emp:'PN', month:3, period:'Apr 1 – Apr 30',  schedule:'Monthly',        net:6500 },
+    { emp:'SM', month:3, period:'Apr 15 – Apr 30', schedule:'Bi-weekly 2/2',  net:2000 },
+    { emp:'SM', month:3, period:'Apr 1 – Apr 14',  schedule:'Bi-weekly 1/2',  net:2000 },
+    { emp:'TH', month:3, period:'Apr 15 – Apr 30', schedule:'Bi-weekly 2/2',  net:1600 },
+    { emp:'TH', month:3, period:'Apr 1 – Apr 14',  schedule:'Bi-weekly 1/2',  net:1600 },
+
+    // ── MARCH 2026 (month 2) — 4 work-weeks → $700 ────────────
+    { emp:'JO', month:2, period:'Mar 23 – Mar 27', schedule:'Weekly 4/4', net:700  },
+    { emp:'JO', month:2, period:'Mar 16 – Mar 20', schedule:'Weekly 3/4', net:700  },
+    { emp:'JO', month:2, period:'Mar 9 – Mar 13',  schedule:'Weekly 2/4', net:700  },
+    { emp:'JO', month:2, period:'Mar 2 – Mar 6',   schedule:'Weekly 1/4', net:700  },
+    { emp:'PN', month:2, period:'Mar 1 – Mar 31',  schedule:'Monthly',        net:6500 },
+    { emp:'SM', month:2, period:'Mar 15 – Mar 31', schedule:'Bi-weekly 2/2',  net:2000 },
+    { emp:'SM', month:2, period:'Mar 1 – Mar 14',  schedule:'Bi-weekly 1/2',  net:2000 },
+    { emp:'TH', month:2, period:'Mar 15 – Mar 31', schedule:'Bi-weekly 2/2',  net:1600 },
+    { emp:'TH', month:2, period:'Mar 1 – Mar 14',  schedule:'Bi-weekly 1/2',  net:1600 },
+
+    // ── FEBRUARY 2026 (month 1) — 4 work-weeks → $700 ─────────
+    { emp:'JO', month:1, period:'Feb 23 – Feb 27', schedule:'Weekly 4/4', net:700  },
+    { emp:'JO', month:1, period:'Feb 16 – Feb 20', schedule:'Weekly 3/4', net:700  },
+    { emp:'JO', month:1, period:'Feb 9 – Feb 13',  schedule:'Weekly 2/4', net:700  },
+    { emp:'JO', month:1, period:'Feb 2 – Feb 6',   schedule:'Weekly 1/4', net:700  },
+    { emp:'PN', month:1, period:'Feb 1 – Feb 28',  schedule:'Monthly',        net:6500 },
+    { emp:'SM', month:1, period:'Feb 15 – Feb 28', schedule:'Bi-weekly 2/2',  net:2000 },
+    { emp:'SM', month:1, period:'Feb 1 – Feb 14',  schedule:'Bi-weekly 1/2',  net:2000 },
+    { emp:'TH', month:1, period:'Feb 15 – Feb 28', schedule:'Bi-weekly 2/2',  net:1600 },
+    { emp:'TH', month:1, period:'Feb 1 – Feb 14',  schedule:'Bi-weekly 1/2',  net:1600 },
+
+    // ── JANUARY 2026 (month 0) — 5 work-weeks → $560 ──────────
+    { emp:'JO', month:0, period:'Jan 26 – Jan 30', schedule:'Weekly 5/5', net:560  },
+    { emp:'JO', month:0, period:'Jan 19 – Jan 23', schedule:'Weekly 4/5', net:560  },
+    { emp:'JO', month:0, period:'Jan 12 – Jan 16', schedule:'Weekly 3/5', net:560  },
+    { emp:'JO', month:0, period:'Jan 5 – Jan 9',   schedule:'Weekly 2/5', net:560  },
+    { emp:'JO', month:0, period:'Dec 29 – Jan 2',  schedule:'Weekly 1/5', net:560  },
+    { emp:'PN', month:0, period:'Jan 1 – Jan 31',  schedule:'Monthly',        net:6500 },
+    { emp:'SM', month:0, period:'Jan 15 – Jan 31', schedule:'Bi-weekly 2/2',  net:2000 },
+    { emp:'SM', month:0, period:'Jan 1 – Jan 14',  schedule:'Bi-weekly 1/2',  net:2000 },
+    { emp:'TH', month:0, period:'Jan 15 – Jan 31', schedule:'Bi-weekly 2/2',  net:1600 },
+    { emp:'TH', month:0, period:'Jan 1 – Jan 14',  schedule:'Bi-weekly 1/2',  net:1600 }
+  ];
+
+  const EMP_MAP = { SM:'Sarah Mitchell', JO:'James Okafor', PN:'Priya Nair', TH:'Tom Harrington' };
+
+  let activeFilter = 'all';
+
+  function fmt(n) {
+    if (!n) return '—';
+    return '$' + n.toLocaleString('en-US');
+  }
+
+  function renderPayslips(filter) {
+    activeFilter = filter;
+    const slips = filter === 'all' ? SLIPS : SLIPS.filter(s => s.emp === filter);
+
+    // ── stats ──
+    const ytd   = slips.reduce((a,s) => a + s.net, 0);
+    const curMo  = slips.filter(s => s.month === 6).reduce((a,s) => a + s.net, 0);
+    const q = [0,1,2,3].map(q => slips.filter(s => Math.floor(s.month/3) === q).reduce((a,s) => a + s.net, 0));
+
+    document.getElementById('ps-stat-ytd').textContent   = fmt(ytd);
+    document.getElementById('ps-stat-month').textContent = fmt(curMo) || '—';
+    document.getElementById('ps-q1').textContent = fmt(q[0]);
+    document.getElementById('ps-q2').textContent = fmt(q[1]);
+    document.getElementById('ps-q3').textContent = fmt(q[2]);
+    document.getElementById('ps-q4').textContent = fmt(q[3]);
+
+    // ── header label ──
+    const emp = EMPLOYEES.find(e => e.key === filter);
+    document.getElementById('ps-header-label').textContent =
+      filter === 'all' ? '2026 Pay Records' : (emp.full + ' · 2026');
+
+    // ── pills ──
+    const pillsEl = document.getElementById('ps-pills');
+    pillsEl.innerHTML = EMPLOYEES.map(e => {
+      const active = e.key === filter;
+      return '<button onclick="renderPayslips(\'' + e.key + '\')" style="background:' + (active ? '#dbeafe' : '#f3f4f6') + ';border:1px solid ' + (active ? '#bfdbfe' : '#e5e7eb') + ';border-radius:20px;padding:5px 12px;font-size:12px;color:' + (active ? '#1d4ed8' : '#9ca3af') + ';cursor:pointer;">' + e.label + '</button>';
+    }).join('');
+
+    // ── list (months 9→0, recent first) ──
+    const listEl = document.getElementById('ps-list');
+    let html = '';
+    for (let m = 9; m >= 0; m--) {
+      const monthSlips = slips.filter(s => s.month === m);
+      const monthTotal = monthSlips.reduce((a,s) => a + s.net, 0);
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
+            + '<p class="section-label" style="margin:0;">' + MONTHS[m] + ' 2026</p>'
+            + '<span style="font-size:11px;color:#d1d5db;">' + (monthTotal ? fmt(monthTotal) + ' paid' : '—') + '</span>'
+            + '</div>';
+      if (monthSlips.length === 0) {
+        html += '<div style="background:#f9fafb;border:1px dashed #e5e7eb;border-radius:12px;padding:12px 14px;margin-bottom:14px;text-align:center;"><span style="font-size:12px;color:#e5e7eb;">No payslips</span></div>';
+      } else {
+        html += '<div style="background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;margin-bottom:14px;">';
+        monthSlips.forEach((s, i) => {
+          if (i > 0) html += '<div style="height:1px;background:#f3f4f6;"></div>';
+          html += '<div style="padding:12px 14px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;" onclick="show(\'s-payslip-detail\')">'
+                + '<div style="display:flex;align-items:center;gap:10px;">'
+                + '<div style="width:36px;height:36px;border-radius:18px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#9ca3af;flex-shrink:0;">' + s.emp + '</div>'
+                + '<div><div style="font-size:14px;font-weight:600;color:#374151;">' + EMP_MAP[s.emp] + '</div>'
+                + '<div style="font-size:11px;color:#d1d5db;margin-top:1px;">' + s.period + ' · ' + (s.schedule || '') + '</div></div>'
+                + '</div>'
+                + '<div style="text-align:right;"><div style="font-size:15px;font-weight:700;color:#6b7280;">' + fmt(s.net) + '</div>'
+                + '<div style="font-size:10px;color:#d1d5db;">net pay</div></div>'
+                + '</div>';
+        });
+        html += '</div>';
+      }
+    }
+    listEl.innerHTML = html;
+  }
+
+  // initialise payslip tab on first load
+  renderPayslips('all');
+</script>
+
+</body>
+</html>

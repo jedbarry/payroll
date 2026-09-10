@@ -287,32 +287,45 @@ Allow the admin to back up the full local database to S3 as a JSON snapshot and 
 
 ---
 
-### Sub-Task 8 — Navigation & App Shell
+### Sub-Task 8 — Navigation, App Shell & Theme
 
 **Status:** `[ ] pending`
 
 **Intent**
-Wire all screens together with a coherent navigation structure and finalise the app entry point so the admin can move naturally between employees, payroll, payslips, and sync.
+Wire all screens together with a coherent navigation structure, finalise the app entry point, and implement a user-toggleable light/dark theme that persists across sessions.
 
 **Expected Outcomes**
-- Bottom tab navigator with four tabs: Employees, Payroll, Payslips, Sync.
-- Stack navigators within Employees (list → form) and Payroll (list → run form) and Payslips (list → detail).
+- Bottom tab navigator with three tabs: Employees, Payslips, Sync.
+- Stack navigators within Employees (list → form → run history → run form) and Payslips (list → detail).
 - `App.tsx` initialises the DB (Sub-Task 2) before rendering the navigator.
 - Splash screen waits for DB init to complete before showing the app.
+- **Light/dark theme toggle** accessible from the Sync screen (settings area).
+  - Two complete theme token sets: `darkTheme` and `lightTheme` (colours matching the approved prototypes).
+  - Active theme stored in `expo-secure-store` under key `app_theme` and restored on launch.
+  - `ThemeContext` (React context) provides the active theme object and a `toggleTheme()` function to the entire component tree.
+  - All screens and components consume colours exclusively from `ThemeContext` — no hardcoded colour values anywhere.
+  - Toggle renders as a labelled switch ("Dark / Light") on the Sync screen.
+  - Theme change takes effect immediately without app restart.
 
 **Todo List**
-1. Create `src/navigation/RootNavigator.tsx` — bottom tab navigator with four tabs.
-2. Create `src/navigation/EmployeesStack.tsx` — stack: EmployeeList → EmployeeForm.
-3. Create `src/navigation/PayrollStack.tsx` — stack: PayrollRunList → PayrollRunForm.
-4. Create `src/navigation/PayslipsStack.tsx` — stack: PayslipList → PayslipDetail.
-5. Update `App.tsx` — run DB init on mount, show loading indicator until ready, then render `RootNavigator`.
-6. Add tab icons using `@expo/vector-icons`.
-7. Manually walk through all navigation paths on iOS and Android simulators.
+1. Create `src/navigation/RootNavigator.tsx` — bottom tab navigator with three tabs.
+2. Create `src/navigation/EmployeesStack.tsx` — stack: EmployeeList → EmployeeForm → PayrollRunList → PayrollRunForm.
+3. Create `src/navigation/PayslipsStack.tsx` — stack: PayslipList → PayslipDetail.
+4. Update `App.tsx` — run DB init on mount, show loading indicator until ready, then render `RootNavigator` wrapped in `ThemeProvider`.
+5. Create `src/theme/tokens.ts` — define `darkTheme` and `lightTheme` token objects (background, surface, border, text, textMuted, accent, inclusion, deduction, badge colours).
+6. Create `src/theme/ThemeContext.tsx` — React context exposing `theme`, `isDark`, and `toggleTheme()`; reads/writes `expo-secure-store` for persistence.
+7. Wrap `App.tsx` root with `ThemeProvider` from `ThemeContext`.
+8. Refactor all screens and shared components to consume theme tokens from `useTheme()` hook instead of hardcoded values.
+9. Add theme toggle switch to `SyncScreen.tsx`.
+10. Add tab icons using `@expo/vector-icons`.
+11. Manually verify theme toggle on iOS and Android simulators; confirm preference persists after app restart.
 
 **Relevant Context**
 - DB initialisation from Sub-Task 2 (`src/db/index.ts`) must complete before any screen mounts.
 - Employees, Payroll, and Payslips screens reference each other via navigation params (e.g. `employeeId`).
-- Payslips tab may optionally be reached from the Payroll tab post-commit as a shortcut.
+- Dark theme tokens map to `prototype.html`; light theme tokens map to `prototype-light.html`.
+- `expo-secure-store` is already a dependency from Sub-Task 7 — no new package needed.
+- Do not use React Native's built-in `Appearance` API for the toggle — the user's explicit in-app preference must always override the system setting.
 
 ---
 
@@ -321,27 +334,24 @@ Wire all screens together with a coherent navigation structure and finalise the 
 **Status:** `[ ] pending`
 
 **Intent**
-Produce a single self-contained interactive HTML prototype that the owner can open in a browser to review and approve all screen designs before any React Native code is written. Dark navy/charcoal theme with a bright accent colour.
+Produce self-contained interactive HTML prototypes that the owner can open in a browser to review and approve all screen designs — in both dark and light themes — before any React Native code is written.
 
 **Expected Outcomes**
-- One `prototype.html` file at the repo root, no external dependencies.
-- Covers all major screens: Employee List, Employee Form, Payroll Run List, Payroll Run Form (with line items), Payslip List, Payslip Detail, Sync Screen.
+- Two prototype files at the repo root, no external dependencies:
+  - `prototype.html` — dark navy/charcoal theme with sky-blue accent.
+  - `prototype-light.html` — light grey/white theme with deeper blue accent.
+- Both cover all major screens: Employee List, Employee Form, Run History, Payroll Run Form (with line items), Payslip List, Payslip Detail, Sync Screen.
 - Clickable navigation between screens that mimics the bottom-tab + stack navigator structure.
-- Realistic dummy data pre-populated so the owner can evaluate layout and information hierarchy.
+- Realistic dummy data pre-populated (Jan–Oct 2026, 4 employees) so the owner can evaluate layout and information hierarchy.
 - Mobile viewport (375 × 812 — iPhone 14 size) rendered centred on a desktop browser.
 
 **Todo List**
-1. Design and build `prototype.html` — all screens as hidden `<div>` panels, JS toggles visibility.
-2. Implement bottom tab bar (Employees, Payroll, Payslips, Sync) with active-state highlight.
-3. Build Employee List screen with dummy employees and a + FAB.
-4. Build Employee Form screen (add/edit mode).
-5. Build Payroll Run List screen per employee.
-6. Build Payroll Run Form screen with hours input, line item add/remove, live net-pay preview.
-7. Build Payslip List and Payslip Detail screens.
-8. Build Sync screen with credential fields and export/import buttons.
-9. Apply dark navy/charcoal theme with bright accent throughout.
+1. ✅ Design and build `prototype.html` (dark theme) — all screens, full dummy data.
+2. ✅ Build `prototype-light.html` — identical structure, light palette.
+3. Owner reviews both and approves preferred theme (or requests mix).
 
 **Relevant Context**
 - This is design approval only — no React Native code.
-- Dummy data should reflect realistic small-business payroll (3–4 employees, 2–3 past pay runs).
-- Owner will approve the prototype before Sub-Tasks 4–8 are implemented.
+- Dark theme tokens are the source of truth for `src/theme/tokens.ts` `darkTheme` (Sub-Task 8).
+- Light theme tokens are the source of truth for `src/theme/tokens.ts` `lightTheme` (Sub-Task 8).
+- Owner approval of both prototypes gates Sub-Tasks 4–8.
