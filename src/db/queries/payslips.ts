@@ -1,0 +1,56 @@
+import { getDb } from '../index';
+import { Payslip } from '../../domain/types';
+import { generateId } from '../utils';
+
+interface PayslipRow {
+  id: string;
+  payroll_run_id: string;
+  employee_id: string;
+  generated_at: string;
+}
+
+function mapPayslipRow(row: PayslipRow): Payslip {
+  return {
+    id: row.id,
+    payroll_run_id: row.payroll_run_id,
+    employee_id: row.employee_id,
+    generated_at: row.generated_at,
+  };
+}
+
+export async function insertPayslip(
+  payslip: Omit<Payslip, 'id' | 'generated_at'> & { id?: string; generated_at?: string },
+): Promise<Payslip> {
+  const db = getDb();
+  const id = payslip.id ?? generateId();
+  const generated_at = payslip.generated_at ?? new Date().toISOString();
+
+  await db.runAsync(
+    `INSERT INTO payslips (id, payroll_run_id, employee_id, generated_at)
+     VALUES (?, ?, ?, ?);`,
+    [id, payslip.payroll_run_id, payslip.employee_id, generated_at],
+  );
+
+  return {
+    id,
+    payroll_run_id: payslip.payroll_run_id,
+    employee_id: payslip.employee_id,
+    generated_at,
+  };
+}
+
+export async function getPayslipsByYear(year: number): Promise<Payslip[]> {
+  const db = getDb();
+  const yearPattern = `${year}-%`;
+  const rows = await db.getAllAsync<PayslipRow>(
+    'SELECT * FROM payslips WHERE generated_at LIKE ? ORDER BY generated_at DESC;',
+    [yearPattern],
+  );
+  return rows.map(mapPayslipRow);
+}
+
+export async function getPayslipById(id: string): Promise<Payslip | null> {
+  const db = getDb();
+  const row = await db.getFirstAsync<PayslipRow>('SELECT * FROM payslips WHERE id = ?;', [id]);
+  return row ? mapPayslipRow(row) : null;
+}

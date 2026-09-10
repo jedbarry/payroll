@@ -1,0 +1,43 @@
+{
+  "name": "payroll",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1129.0",
+    "@react-navigation/bottom-tabs": "^7.18.18",
+    "@react-navigation/native": "^7.3.18",
+    "@react-navigation/native-stack": "^7.18.10",
+    "expo": "~57.0.21",
+    "expo-secure-store": "~57.0.3",
+    "expo-sqlite": "~57.0.2",
+    "expo-status-bar": "~57.0.1",
+    "react": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "~4.26.0",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/react": "~19.2.2",
+    "@typescript-eslint/eslint-plugin": "^8.70.0",
+    "@typescript-eslint/parser": "^8.70.0",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "jest": "^30.5.1",
+    "prettier": "^3.9.6",
+    "ts-jest": "^29.4.12",
+    "typescript": "~6.0.3"
+  },
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "test": "jest",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "private": true
+}
