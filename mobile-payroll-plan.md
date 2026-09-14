@@ -62,7 +62,7 @@ payslips
 
 ### Sub-Task 1 — Project Scaffold
 
-**Status:** `[ ] pending`
+**Status:** `[x] complete`
 
 **Intent**
 Bootstrap the Expo + React Native + TypeScript project with the correct folder structure, linting, and dependency set so every subsequent sub-task builds on a consistent foundation.
@@ -90,7 +90,7 @@ Bootstrap the Expo + React Native + TypeScript project with the correct folder s
 
 ### Sub-Task 2 — Local Database Layer
 
-**Status:** `[ ] pending`
+**Status:** `[x] complete`
 
 **Intent**
 Define and initialise the SQLite schema so all domain data is persisted locally on-device. This is the single source of truth for the entire app.
@@ -118,7 +118,7 @@ Define and initialise the SQLite schema so all domain data is persisted locally 
 
 ### Sub-Task 3 — Domain Logic / Payroll Calculation Engine
 
-**Status:** `[ ] pending`
+**Status:** `[x] complete`
 
 **Intent**
 Implement the pure business logic for computing a payroll run so it can be tested independently of the UI and database.
