@@ -1,0 +1,47 @@
+import { create } from 'zustand';
+import { PayslipView } from '../domain/types';
+import { getPayslipsByYear } from '../db/queries/payslips';
+import { getPayrollRunById } from '../db/queries/payrollRuns';
+import { getEmployeeById } from '../db/queries/employees';
+import { getLineItemsByRun } from '../db/queries/lineItems';
+
+export interface PayslipStore {
+  payslips: PayslipView[];
+  loading: boolean;
+  loadPayslipsForYear: (year: number) => Promise<void>;
+}
+
+export const usePayslipStore = create<PayslipStore>((set) => ({
+  payslips: [],
+  loading: false,
+
+  loadPayslipsForYear: async (year: number) => {
+    set({ loading: true });
+    try {
+      const basePayslips = await getPayslipsByYear(year);
+      const views: PayslipView[] = [];
+
+      for (const p of basePayslips) {
+        const [run, employee, lineItems] = await Promise.all([
+          getPayrollRunById(p.payroll_run_id),
+          getEmployeeById(p.employee_id),
+          getLineItemsByRun(p.payroll_run_id),
+        ]);
+
+        if (run && employee) {
+          views.push({
+            ...p,
+            run,
+            employee,
+            lineItems,
+          });
+        }
+      }
+
+      set({ payslips: views, loading: false });
+    } catch (err) {
+      set({ loading: false });
+      throw err;
+    }
+  },
+}));

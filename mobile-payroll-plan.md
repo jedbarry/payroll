@@ -155,7 +155,7 @@ Implement the pure business logic for computing a payroll run so it can be teste
 
 ### Sub-Task 4 — Employee Management Screens
 
-**Status:** `[ ] pending`
+**Status:** `[x] complete`
 
 **Intent**
 Give the admin the ability to create, edit, and archive employees including their monthly rate, pay schedule, and pay day configuration.
@@ -190,7 +190,7 @@ Give the admin the ability to create, edit, and archive employees including thei
 
 ### Sub-Task 5 — Payroll Run Screens
 
-**Status:** `[ ] pending`
+**Status:** `[x] complete`
 
 **Intent**
 Allow the admin to open a new payroll run for an employee, review the auto-computed base amount, add manual line items (inclusions and deductions), preview net pay, and commit the run.
@@ -225,7 +225,7 @@ Allow the admin to open a new payroll run for an employee, review the auto-compu
 
 ### Sub-Task 6 — Payslip Viewer
 
-**Status:** `[ ] pending`
+**Status:** `[x] complete`
 
 **Intent**
 Provide a clean, readable in-app view of committed payslips grouped by month (most recent first), scoped to the current year, with a stats header that recalculates when an employee filter is applied.
@@ -259,7 +259,7 @@ Provide a clean, readable in-app view of committed payslips grouped by month (mo
 
 ### Sub-Task 7 — S3 Sync Layer
 
-**Status:** `[ ] pending`
+**Status:** `[x] complete`
 
 **Intent**
 Allow the admin to back up the full local database to S3 as a JSON snapshot and restore from it on a new device, providing a safety net without requiring a server.
@@ -289,7 +289,7 @@ Allow the admin to back up the full local database to S3 as a JSON snapshot and 
 
 ### Sub-Task 8 — Navigation, App Shell & Theme
 
-**Status:** `[ ] pending`
+**Status:** `[x] complete`
 
 **Intent**
 Wire all screens together with a coherent navigation structure, finalise the app entry point, and implement a user-toggleable light/dark theme that persists across sessions.
@@ -331,7 +331,7 @@ Wire all screens together with a coherent navigation structure, finalise the app
 
 ### Sub-Task 9 — UI/UX Prototype
 
-**Status:** `[ ] pending`
+**Status:** `[x] complete`
 
 **Intent**
 Produce self-contained interactive HTML prototypes that the owner can open in a browser to review and approve all screen designs — in both dark and light themes — before any React Native code is written.
