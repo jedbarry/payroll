@@ -266,15 +266,17 @@ Allow the admin to back up the full local database to S3 as a JSON snapshot and 
 
 **Expected Outcomes**
 - `src/sync/s3Sync.ts` exports `exportToS3(config)` and `importFromS3(config)` functions.
-- Export serialises all tables to a single JSON file and uploads to a configured S3 bucket/key.
-- Import downloads the JSON, wipes local tables, and re-inserts all records.
+- Export serialises all tables to a JSON snapshot, saves the snapshot to a local File in the device/iOS document directory, and then uploads it to the configured S3 bucket/key.
+- Import downloads the JSON from S3, saves it to a local File in the device/iOS document directory first, wipes local tables, and re-inserts all records.
+- `src/sync/fileBackup.ts` handles persistent local file backups (`payroll-backup-latest.json` and timestamped snapshots) using `expo-file-system`.
 - `SyncScreen` in the app lets the admin enter S3 credentials (bucket, region, key, secret), trigger export, and trigger import.
 - Credentials stored securely in device keychain via `expo-secure-store`.
 - Conflict strategy: last-write-wins (the export timestamp is embedded in the JSON).
 
 **Todo List**
-1. Create `src/sync/s3Sync.ts` — `exportToS3` (serialize all DB tables → JSON → upload) and `importFromS3` (download → wipe → re-insert).
-2. Create `src/sync/serialise.ts` — helpers to dump all tables to a plain JS object and restore from one.
+1. Create `src/sync/s3Sync.ts` — `exportToS3` (serialize all DB tables → JSON → save to local File → upload to S3) and `importFromS3` (download from S3 → save to local File → wipe DB → re-insert).
+2. Create `src/sync/fileBackup.ts` — save and read snapshot JSON files on the device filesystem.
+3. Create `src/sync/serialise.ts` — helpers to dump all tables to a plain JS object and restore from one.
 3. Create `src/screens/sync/SyncScreen.tsx` — credential form, Export button, Import button, last-sync timestamp display.
 4. Install and configure `expo-secure-store` for persisting S3 credentials.
 5. Add confirmation dialog before import (destructive — overwrites local data).
