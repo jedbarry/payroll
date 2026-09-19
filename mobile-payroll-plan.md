@@ -10,6 +10,40 @@ A greenfield, offline-first React Native (Expo) app for a single business-owner 
 
 ---
 
+## Commands
+
+### Development
+
+```bash
+npx expo start          # Start Metro bundler (scan QR code with Expo Go)
+npx expo start --ios    # Open in iOS simulator directly
+npm test                # Run Jest unit tests
+npm run lint            # ESLint
+npm run typecheck       # tsc --noEmit
+```
+
+### Build & install to iPhone
+
+Builds locally via Xcode and installs directly onto a connected iPhone. No EAS cloud, no build queue.
+
+```bash
+npx expo run:ios --device                          # debug build
+npx expo run:ios --device --configuration Release  # release build (optimised)
+```
+
+**Requirements:**
+- Xcode installed
+- iPhone connected via USB (or Wi-Fi sync enabled), screen unlocked, and trusted
+- Apple Developer account set in Xcode → Settings → Accounts
+  - Free account: build valid for 7 days
+  - Paid account ($99/yr): build valid for 1 year
+
+Subsequent installs after a code change just re-run the same command — Xcode only recompiles what changed.
+
+**If the build times out** (`The developer disk image could not be mounted`): unlock the phone, unplug and replug the cable, accept any "Trust This Computer?" prompt, then retry.
+
+---
+
 ## Pay Model
 
 Employees are paid a **fixed monthly rate**. The pay schedule controls how many payments are made per month and on which days. The monthly total always equals the monthly rate exactly.
@@ -34,10 +68,13 @@ A work week runs **Monday–Friday (5 working days)**. A week belongs to the mon
 ## Data Model
 
 ```
+departments
+  id, name (unique)
+
 employees
   id, name, monthly_rate, pay_schedule (weekly|biweekly|monthly),
   pay_day_config (1st|15th|last — for monthly; 1st_and_15th|15th_and_last — for biweekly),
-  is_active, created_at
+  department_id (FK → departments, nullable), is_active, created_at
 
 payroll_runs
   id, employee_id, period_start, period_end, base_amount,
@@ -357,3 +394,42 @@ Produce self-contained interactive HTML prototypes that the owner can open in a 
 - Dark theme tokens are the source of truth for `src/theme/tokens.ts` `darkTheme` (Sub-Task 8).
 - Light theme tokens are the source of truth for `src/theme/tokens.ts` `lightTheme` (Sub-Task 8).
 - Owner approval of both prototypes gates Sub-Tasks 4–8.
+
+---
+
+### Sub-Task 10 — Departments (Employee Tag)
+
+**Status:** `[x] complete`
+
+**Intent**
+Employees must be assigned to a department. Departments are a simple lookup tag — no dedicated management screen. The admin assigns a department inline when creating or editing an employee.
+
+**Expected Outcomes**
+- `departments` table: `id TEXT PRIMARY KEY, name TEXT NOT NULL UNIQUE`.
+- `employees.department_id` — nullable FK → `departments(id)`. Existing employees without a department remain valid (`NULL`).
+- `EmployeeFormScreen` shows a **Department** text field (between Monthly Rate and Pay Schedule):
+  - Typing shows a filtered autocomplete dropdown of existing departments.
+  - If the typed name does not exist yet, it is created automatically on save (`upsertDepartmentByName`).
+  - Leaving the field blank is allowed — department is optional.
+- `EmployeeListScreen` shows the department as a small accent-coloured badge on each employee card.
+- Sync layer (`src/sync/serialise.ts`) includes `departments` in export and restore (deleted before employees in FK-safe order).
+- Migration: `ALTER TABLE employees ADD COLUMN department_id TEXT REFERENCES departments(id)` runs once on app launch for existing databases; `try/catch` silently ignores the duplicate-column error on clean installs.
+
+**Todo List**
+1. [ ] `src/db/schema.ts` — add `CREATE_DEPARTMENTS_TABLE` and `MIGRATE_EMPLOYEES_ADD_DEPARTMENT`
+2. [ ] `src/db/index.ts` — run migration after schema creation
+3. [ ] `src/domain/types.ts` — add `Department` interface; add `department_id: string | null` to `Employee`
+4. [ ] `src/db/queries/departments.ts` — `getDepartments`, `getDepartmentById`, `insertDepartment`, `upsertDepartmentByName`, `deleteDepartment`
+5. [ ] `src/db/queries/employees.ts` — `department_id` in `EmployeeRow`, `mapEmployeeRow`, `insertEmployee`, `updateEmployee`
+6. [ ] `src/store/departmentStore.ts` — `loadDepartments`, `ensureDepartment`, `deleteDepartment`
+7. [ ] `src/screens/employees/EmployeeFormScreen.tsx` — Department field with autocomplete; `ensureDepartment` on save
+8. [ ] `src/screens/employees/EmployeeListScreen.tsx` — department badge on employee cards
+9. [ ] `src/sync/serialise.ts` — `departments` in dump and restore
+10. [ ] `prototype.html` — department badges on employee list cards; Department field in Add/Edit forms
+11. [ ] `prototype-light.html` — same as above, light theme colours
+
+**Relevant Context**
+- No separate Departments screen — managed entirely inline from the employee form.
+- `upsertDepartmentByName` uses `COLLATE NOCASE` to avoid case-sensitive duplicates.
+- `department_id` is `NULL` for employees without a department — field is optional.
+- `departments` table must appear before `employees` in `ALL_SCHEMAS` (FK dependency).

@@ -1,3 +1,10 @@
+export const CREATE_DEPARTMENTS_TABLE = `
+CREATE TABLE IF NOT EXISTS departments (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE
+);
+`;
+
 export const CREATE_EMPLOYEES_TABLE = `
 CREATE TABLE IF NOT EXISTS employees (
   id TEXT PRIMARY KEY,
@@ -5,9 +12,15 @@ CREATE TABLE IF NOT EXISTS employees (
   monthly_rate REAL NOT NULL,
   pay_schedule TEXT NOT NULL,
   pay_day_config TEXT,
+  department_id TEXT,
   is_active INTEGER NOT NULL DEFAULT 1,
-  created_at TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  FOREIGN KEY(department_id) REFERENCES departments(id)
 );
+`;
+
+export const MIGRATE_EMPLOYEES_ADD_DEPARTMENT = `
+ALTER TABLE employees ADD COLUMN department_id TEXT REFERENCES departments(id);
 `;
 
 export const CREATE_PAYROLL_RUNS_TABLE = `
@@ -48,6 +61,7 @@ CREATE TABLE IF NOT EXISTS payslips (
 `;
 
 export const ALL_SCHEMAS = [
+  CREATE_DEPARTMENTS_TABLE,
   CREATE_EMPLOYEES_TABLE,
   CREATE_PAYROLL_RUNS_TABLE,
   CREATE_LINE_ITEMS_TABLE,

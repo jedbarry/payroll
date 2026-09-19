@@ -9,15 +9,18 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  FlatList,
 } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { useEmployeeStore } from '../../store/employeeStore';
+import { useDepartmentStore } from '../../store/departmentStore';
 import { getEmployeeById } from '../../db/queries/employees';
 import { PaySchedule, PayDayConfig } from '../../domain/types';
 
 export function EmployeeFormScreen({ route, navigation }: any) {
   const { theme } = useTheme();
   const { addEmployee, updateEmployee, archiveEmployee } = useEmployeeStore();
+  const { departments, loadDepartments, ensureDepartment } = useDepartmentStore();
 
   const mode: 'add' | 'edit' = route.params?.mode || 'add';
   const employeeId: string | undefined = route.params?.employeeId;
@@ -26,8 +29,14 @@ export function EmployeeFormScreen({ route, navigation }: any) {
   const [monthlyRate, setMonthlyRate] = useState('');
   const [schedule, setSchedule] = useState<PaySchedule>('monthly');
   const [payDayConfig, setPayDayConfig] = useState<PayDayConfig | null>('last');
+  const [departmentText, setDepartmentText] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [isActive, setIsActive] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    loadDepartments();
+  }, [loadDepartments]);
 
   useEffect(() => {
     if (mode === 'edit' && employeeId) {
@@ -44,7 +53,27 @@ export function EmployeeFormScreen({ route, navigation }: any) {
     } else {
       navigation.setOptions({ title: 'New Employee' });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, employeeId, navigation]);
+
+  // Fill department text once departments are loaded (edit mode)
+  useEffect(() => {
+    if (mode === 'edit' && employeeId && departmentText === '') {
+      getEmployeeById(employeeId).then((emp) => {
+        if (emp?.department_id) {
+          const dept = departments.find((d) => d.id === emp.department_id);
+          if (dept) setDepartmentText(dept.name);
+        }
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [departments]);
+
+  const filteredSuggestions = departmentText.trim()
+    ? departments.filter((d) =>
+        d.name.toLowerCase().includes(departmentText.trim().toLowerCase()),
+      )
+    : departments;
 
   const handleScheduleChange = (newSchedule: PaySchedule) => {
     setSchedule(newSchedule);
@@ -64,17 +93,16 @@ export function EmployeeFormScreen({ route, navigation }: any) {
   const handleSave = async () => {
     const trimmedName = name.trim();
     const rateNum = parseFloat(monthlyRate);
+    const trimmedDept = departmentText.trim();
 
     if (!trimmedName) {
       Alert.alert('Validation Error', 'Full Name is required.');
       return;
     }
-
     if (isNaN(rateNum) || rateNum <= 0) {
       Alert.alert('Validation Error', 'Monthly Rate must be greater than 0.');
       return;
     }
-
     if (schedule !== 'weekly' && !payDayConfig) {
       Alert.alert('Validation Error', 'Payment Day configuration is required.');
       return;
@@ -82,12 +110,19 @@ export function EmployeeFormScreen({ route, navigation }: any) {
 
     setSaving(true);
     try {
+      let department_id: string | null = null;
+      if (trimmedDept) {
+        const dept = await ensureDepartment(trimmedDept);
+        department_id = dept.id;
+      }
+
       if (mode === 'add') {
         await addEmployee({
           name: trimmedName,
           monthly_rate: rateNum,
           pay_schedule: schedule,
           pay_day_config: schedule === 'weekly' ? null : payDayConfig,
+          department_id,
         });
       } else if (mode === 'edit' && employeeId) {
         await updateEmployee(employeeId, {
@@ -95,6 +130,7 @@ export function EmployeeFormScreen({ route, navigation }: any) {
           monthly_rate: rateNum,
           pay_schedule: schedule,
           pay_day_config: schedule === 'weekly' ? null : payDayConfig,
+          department_id,
           is_active: isActive,
         });
       }
@@ -134,19 +170,15 @@ export function EmployeeFormScreen({ route, navigation }: any) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={[styles.container, { backgroundColor: theme.bg }]}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Full Name */}
         <View style={styles.fieldGroup}>
           <Text style={[styles.label, { color: theme.textMuted }]}>Full Name</Text>
           <TextInput
-            style={[
-              styles.input,
-              {
-                backgroundColor: theme.surface,
-                borderColor: theme.border,
-                color: theme.text,
-              },
-            ]}
+            style={[styles.input, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]}
             placeholder="e.g. Jane Doe"
             placeholderTextColor={theme.textFaint}
             value={name}
@@ -159,14 +191,7 @@ export function EmployeeFormScreen({ route, navigation }: any) {
         <View style={styles.fieldGroup}>
           <Text style={[styles.label, { color: theme.textMuted }]}>Monthly Rate ($)</Text>
           <TextInput
-            style={[
-              styles.input,
-              {
-                backgroundColor: theme.surface,
-                borderColor: theme.border,
-                color: theme.text,
-              },
-            ]}
+            style={[styles.input, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]}
             placeholder="e.g. 5000"
             placeholderTextColor={theme.textFaint}
             value={monthlyRate}
@@ -175,41 +200,59 @@ export function EmployeeFormScreen({ route, navigation }: any) {
           />
         </View>
 
+        {/* Department */}
+        <View style={styles.fieldGroup}>
+          <Text style={[styles.label, { color: theme.textMuted }]}>Department</Text>
+          <TextInput
+            style={[styles.input, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]}
+            placeholder="e.g. Engineering"
+            placeholderTextColor={theme.textFaint}
+            value={departmentText}
+            onChangeText={(t) => { setDepartmentText(t); setShowSuggestions(true); }}
+            onFocus={() => setShowSuggestions(true)}
+            onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+            autoCapitalize="words"
+          />
+          {showSuggestions && filteredSuggestions.length > 0 && (
+            <View style={[styles.suggestionsBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+              <FlatList
+                data={filteredSuggestions}
+                keyExtractor={(item) => item.id}
+                scrollEnabled={false}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={[styles.suggestionRow, { borderBottomColor: theme.border }]}
+                    onPress={() => { setDepartmentText(item.name); setShowSuggestions(false); }}
+                  >
+                    <Text style={[styles.suggestionText, { color: theme.text }]}>{item.name}</Text>
+                  </TouchableOpacity>
+                )}
+              />
+            </View>
+          )}
+        </View>
+
         {/* Pay Schedule */}
         <View style={styles.fieldGroup}>
           <Text style={[styles.label, { color: theme.textMuted }]}>Pay Schedule</Text>
           <View style={styles.segmentedRow}>
             {(['monthly', 'biweekly', 'weekly'] as PaySchedule[]).map((sched) => {
               const isSelected = schedule === sched;
-              const title =
-                sched === 'monthly' ? 'Monthly' : sched === 'biweekly' ? 'Bi-weekly' : 'Weekly';
+              const title = sched === 'monthly' ? 'Monthly' : sched === 'biweekly' ? 'Bi-weekly' : 'Weekly';
               return (
                 <TouchableOpacity
                   key={sched}
-                  style={[
-                    styles.segmentButton,
-                    {
-                      backgroundColor: isSelected ? theme.accent : theme.surface,
-                      borderColor: theme.border,
-                    },
-                  ]}
+                  style={[styles.segmentButton, { backgroundColor: isSelected ? theme.accent : theme.surface, borderColor: theme.border }]}
                   onPress={() => handleScheduleChange(sched)}
                 >
-                  <Text
-                    style={[
-                      styles.segmentText,
-                      { color: isSelected ? theme.accentText : theme.text },
-                    ]}
-                  >
-                    {title}
-                  </Text>
+                  <Text style={[styles.segmentText, { color: isSelected ? theme.accentText : theme.text }]}>{title}</Text>
                 </TouchableOpacity>
               );
             })}
           </View>
         </View>
 
-        {/* Pay Day Config (context-sensitive) */}
+        {/* Pay Day Config */}
         {schedule === 'monthly' && (
           <View style={styles.fieldGroup}>
             <Text style={[styles.label, { color: theme.textMuted }]}>Payment Day</Text>
@@ -220,23 +263,10 @@ export function EmployeeFormScreen({ route, navigation }: any) {
                 return (
                   <TouchableOpacity
                     key={cfg}
-                    style={[
-                      styles.segmentButton,
-                      {
-                        backgroundColor: isSelected ? theme.accent : theme.surface,
-                        borderColor: theme.border,
-                      },
-                    ]}
+                    style={[styles.segmentButton, { backgroundColor: isSelected ? theme.accent : theme.surface, borderColor: theme.border }]}
                     onPress={() => setPayDayConfig(cfg)}
                   >
-                    <Text
-                      style={[
-                        styles.segmentText,
-                        { color: isSelected ? theme.accentText : theme.text },
-                      ]}
-                    >
-                      {title}
-                    </Text>
+                    <Text style={[styles.segmentText, { color: isSelected ? theme.accentText : theme.text }]}>{title}</Text>
                   </TouchableOpacity>
                 );
               })}
@@ -254,23 +284,10 @@ export function EmployeeFormScreen({ route, navigation }: any) {
                 return (
                   <TouchableOpacity
                     key={cfg}
-                    style={[
-                      styles.segmentButton,
-                      {
-                        backgroundColor: isSelected ? theme.accent : theme.surface,
-                        borderColor: theme.border,
-                      },
-                    ]}
+                    style={[styles.segmentButton, { backgroundColor: isSelected ? theme.accent : theme.surface, borderColor: theme.border }]}
                     onPress={() => setPayDayConfig(cfg)}
                   >
-                    <Text
-                      style={[
-                        styles.segmentText,
-                        { color: isSelected ? theme.accentText : theme.text },
-                      ]}
-                    >
-                      {title}
-                    </Text>
+                    <Text style={[styles.segmentText, { color: isSelected ? theme.accentText : theme.text }]}>{title}</Text>
                   </TouchableOpacity>
                 );
               })}
@@ -278,7 +295,7 @@ export function EmployeeFormScreen({ route, navigation }: any) {
           </View>
         )}
 
-        {/* Save button */}
+        {/* Save */}
         <TouchableOpacity
           style={[styles.primaryButton, { backgroundColor: theme.accent }]}
           onPress={handleSave}
@@ -290,36 +307,23 @@ export function EmployeeFormScreen({ route, navigation }: any) {
           </Text>
         </TouchableOpacity>
 
-        {/* Edit mode extra actions */}
+        {/* Edit-mode actions */}
         {mode === 'edit' && employeeId && (
           <View style={styles.editActions}>
             <TouchableOpacity
-              style={[
-                styles.secondaryButton,
-                { backgroundColor: theme.surfaceAlt, borderColor: theme.border },
-              ]}
-              onPress={() =>
-                navigation.navigate('PayrollRunList', {
-                  employeeId,
-                  employeeName: name,
-                })
-              }
+              style={[styles.secondaryButton, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}
+              onPress={() => navigation.navigate('PayrollRunList', { employeeId, employeeName: name })}
               activeOpacity={0.7}
             >
-              <Text style={[styles.secondaryButtonText, { color: theme.accent }]}>
-                Run History & New Run
-              </Text>
+              <Text style={[styles.secondaryButtonText, { color: theme.accent }]}>Run History &amp; New Run</Text>
             </TouchableOpacity>
-
             {isActive && (
               <TouchableOpacity
                 style={[styles.archiveButton, { borderColor: theme.deduction }]}
                 onPress={handleArchive}
                 activeOpacity={0.7}
               >
-                <Text style={[styles.archiveButtonText, { color: theme.deduction }]}>
-                  Archive Employee
-                </Text>
+                <Text style={[styles.archiveButtonText, { color: theme.deduction }]}>Archive Employee</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -330,79 +334,26 @@ export function EmployeeFormScreen({ route, navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { flex: 1 },
+  scrollContent: { padding: 20, paddingBottom: 40 },
+  fieldGroup: { marginBottom: 20 },
+  label: { fontSize: 14, fontWeight: '500', marginBottom: 8 },
+  input: { height: 48, borderRadius: 8, borderWidth: 1, paddingHorizontal: 14, fontSize: 16 },
+  suggestionsBox: {
+    borderWidth: 1, borderTopWidth: 0,
+    borderBottomLeftRadius: 8, borderBottomRightRadius: 8,
+    overflow: 'hidden', marginTop: -1,
   },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  fieldGroup: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '500',
-    marginBottom: 8,
-  },
-  input: {
-    height: 48,
-    borderRadius: 8,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    fontSize: 16,
-  },
-  segmentedRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  segmentButton: {
-    flex: 1,
-    height: 44,
-    borderRadius: 8,
-    borderWidth: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  segmentText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  primaryButton: {
-    height: 50,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  primaryButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  editActions: {
-    marginTop: 24,
-    gap: 12,
-  },
-  secondaryButton: {
-    height: 50,
-    borderRadius: 10,
-    borderWidth: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  secondaryButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  archiveButton: {
-    height: 50,
-    borderRadius: 10,
-    borderWidth: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  archiveButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
+  suggestionRow: { paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth },
+  suggestionText: { fontSize: 15 },
+  segmentedRow: { flexDirection: 'row', gap: 8 },
+  segmentButton: { flex: 1, height: 44, borderRadius: 8, borderWidth: 1, justifyContent: 'center', alignItems: 'center' },
+  segmentText: { fontSize: 14, fontWeight: '600' },
+  primaryButton: { height: 50, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginTop: 10 },
+  primaryButtonText: { fontSize: 16, fontWeight: '700' },
+  editActions: { marginTop: 24, gap: 12 },
+  secondaryButton: { height: 50, borderRadius: 10, borderWidth: 1, justifyContent: 'center', alignItems: 'center' },
+  secondaryButtonText: { fontSize: 15, fontWeight: '600' },
+  archiveButton: { height: 50, borderRadius: 10, borderWidth: 1, justifyContent: 'center', alignItems: 'center' },
+  archiveButtonText: { fontSize: 15, fontWeight: '600' },
 });

@@ -8,6 +8,7 @@ interface EmployeeRow {
   monthly_rate: number;
   pay_schedule: string;
   pay_day_config: string | null;
+  department_id: string | null;
   is_active: number;
   created_at: string;
 }
@@ -19,6 +20,7 @@ function mapEmployeeRow(row: EmployeeRow): Employee {
     monthly_rate: row.monthly_rate,
     pay_schedule: row.pay_schedule as PaySchedule,
     pay_day_config: row.pay_day_config as PayDayConfig | null,
+    department_id: row.department_id ?? null,
     is_active: Boolean(row.is_active),
     created_at: row.created_at,
   };
@@ -33,14 +35,15 @@ export async function insertEmployee(
   const is_active = employee.is_active ? 1 : 0;
 
   await db.runAsync(
-    `INSERT INTO employees (id, name, monthly_rate, pay_schedule, pay_day_config, is_active, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?);`,
+    `INSERT INTO employees (id, name, monthly_rate, pay_schedule, pay_day_config, department_id, is_active, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?);`,
     [
       id,
       employee.name,
       employee.monthly_rate,
       employee.pay_schedule,
       employee.pay_day_config ?? null,
+      employee.department_id ?? null,
       is_active,
       created_at,
     ],
@@ -52,6 +55,7 @@ export async function insertEmployee(
     monthly_rate: employee.monthly_rate,
     pay_schedule: employee.pay_schedule,
     pay_day_config: employee.pay_day_config ?? null,
+    department_id: employee.department_id ?? null,
     is_active: employee.is_active,
     created_at,
   };
@@ -93,13 +97,14 @@ export async function updateEmployee(
 
   await db.runAsync(
     `UPDATE employees
-     SET name = ?, monthly_rate = ?, pay_schedule = ?, pay_day_config = ?, is_active = ?
+     SET name = ?, monthly_rate = ?, pay_schedule = ?, pay_day_config = ?, department_id = ?, is_active = ?
      WHERE id = ?;`,
     [
       updated.name,
       updated.monthly_rate,
       updated.pay_schedule,
       updated.pay_day_config ?? null,
+      updated.department_id ?? null,
       updated.is_active ? 1 : 0,
       id,
     ],

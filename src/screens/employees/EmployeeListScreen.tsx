@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/ThemeContext';
 import { useEmployeeStore } from '../../store/employeeStore';
+import { useDepartmentStore } from '../../store/departmentStore';
 import { Employee } from '../../domain/types';
 
 function formatSchedule(schedule: string): string {
@@ -53,14 +54,17 @@ function formatCurrency(amount: number): string {
 export function EmployeeListScreen({ navigation }: any) {
   const { theme } = useTheme();
   const { allEmployees, loading, loadEmployees } = useEmployeeStore();
+  const { departments, loadDepartments } = useDepartmentStore();
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
       loadEmployees(true);
+      loadDepartments();
     });
     loadEmployees(true);
+    loadDepartments();
     return unsubscribe;
-  }, [navigation, loadEmployees]);
+  }, [navigation, loadEmployees, loadDepartments]);
 
   const activeEmployees = allEmployees.filter((e) => e.is_active);
   const archivedEmployees = allEmployees.filter((e) => !e.is_active);
@@ -69,6 +73,9 @@ export function EmployeeListScreen({ navigation }: any) {
     const scheduleLabel = formatSchedule(employee.pay_schedule);
     const payDayLabel = formatPayDay(employee.pay_day_config);
     const timingDetail = payDayLabel ? ` · ${payDayLabel}` : '';
+    const departmentName = employee.department_id
+      ? (departments.find((d) => d.id === employee.department_id)?.name ?? null)
+      : null;
 
     return (
       <TouchableOpacity
@@ -101,16 +108,18 @@ export function EmployeeListScreen({ navigation }: any) {
             {scheduleLabel}
             {timingDetail}
           </Text>
-          {isArchived && (
-            <View
-              style={[
-                styles.archivedBadge,
-                { backgroundColor: theme.surfaceAlt, borderColor: theme.border },
-              ]}
-            >
-              <Text style={[styles.archivedText, { color: theme.textMuted }]}>Archived</Text>
-            </View>
-          )}
+          <View style={styles.badgeRow}>
+            {departmentName && (
+              <View style={[styles.deptBadge, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
+                <Text style={[styles.deptBadgeText, { color: theme.accent }]}>{departmentName}</Text>
+              </View>
+            )}
+            {isArchived && (
+              <View style={[styles.archivedBadge, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
+                <Text style={[styles.archivedText, { color: theme.textMuted }]}>Archived</Text>
+              </View>
+            )}
+          </View>
         </View>
       </TouchableOpacity>
     );
@@ -204,6 +213,22 @@ const styles = StyleSheet.create({
   },
   scheduleText: {
     fontSize: 14,
+    flex: 1,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    gap: 6,
+    alignItems: 'center',
+  },
+  deptBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  deptBadgeText: {
+    fontSize: 12,
+    fontWeight: '500',
   },
   archivedBadge: {
     paddingHorizontal: 8,

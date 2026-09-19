@@ -1,10 +1,12 @@
 import { getDb } from '../db/index';
+import { insertDepartment } from '../db/queries/departments';
 import { insertEmployee } from '../db/queries/employees';
 import { insertPayrollRun } from '../db/queries/payrollRuns';
 import { insertLineItem } from '../db/queries/lineItems';
 import { insertPayslip } from '../db/queries/payslips';
 
 export interface SnapshotTable {
+  departments: any[];
   employees: any[];
   payroll_runs: any[];
   line_items: any[];
@@ -20,6 +22,7 @@ export interface Snapshot {
 export async function dumpToSnapshot(): Promise<Snapshot> {
   const db = getDb();
 
+  const departments = await db.getAllAsync('SELECT * FROM departments');
   const employees = await db.getAllAsync('SELECT * FROM employees');
   const payroll_runs = await db.getAllAsync('SELECT * FROM payroll_runs');
   const line_items = await db.getAllAsync('SELECT * FROM line_items');
@@ -28,7 +31,7 @@ export async function dumpToSnapshot(): Promise<Snapshot> {
   return {
     version: 1,
     exportedAt: new Date().toISOString(),
-    tables: { employees, payroll_runs, line_items, payslips },
+    tables: { departments, employees, payroll_runs, line_items, payslips },
   };
 }
 
@@ -40,8 +43,13 @@ export async function restoreFromSnapshot(snapshot: Snapshot): Promise<void> {
   await db.execAsync('DELETE FROM line_items;');
   await db.execAsync('DELETE FROM payroll_runs;');
   await db.execAsync('DELETE FROM employees;');
+  await db.execAsync('DELETE FROM departments;');
 
-  const { employees, payroll_runs, line_items, payslips } = snapshot.tables;
+  const { departments = [], employees, payroll_runs, line_items, payslips } = snapshot.tables;
+
+  for (const row of departments) {
+    await insertDepartment(row.name);
+  }
 
   for (const row of employees) {
     await insertEmployee(row);

@@ -1,12 +1,18 @@
 export type PaySchedule = 'monthly' | 'biweekly' | 'weekly';
 export type PayDayConfig = '1st' | '15th' | 'last' | '1st_and_15th' | '15th_and_last';
 
+export interface Department {
+  id: string;
+  name: string;
+}
+
 export interface Employee {
   id: string;
   name: string;
   monthly_rate: number;
   pay_schedule: PaySchedule;
   pay_day_config: PayDayConfig | null;
+  department_id: string | null;
   is_active: boolean;
   created_at: string;
 }
