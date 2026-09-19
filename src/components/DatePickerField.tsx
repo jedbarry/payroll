@@ -45,16 +45,25 @@ export function DatePickerField({ label, hint, value, onChange, placeholder = 'N
   const { theme } = useTheme();
   const [show, setShow] = useState(false);
 
-  const handleChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
+  const [pendingDate, setPendingDate] = useState<Date | null>(null);
+
+  const handleValueChange = (_event: DateTimePickerEvent, date?: Date) => {
     if (Platform.OS === 'android') {
       setShow(false);
-    }
-    if (selectedDate) {
-      onChange(toISODate(selectedDate));
+      if (date) onChange(toISODate(date));
+    } else {
+      if (date) setPendingDate(date);
     }
   };
 
   const handleConfirmIOS = () => {
+    if (pendingDate) onChange(toISODate(pendingDate));
+    setPendingDate(null);
+    setShow(false);
+  };
+
+  const handleDismiss = () => {
+    setPendingDate(null);
     setShow(false);
   };
 
@@ -97,7 +106,8 @@ export function DatePickerField({ label, hint, value, onChange, placeholder = 'N
           value={parseDate(value)}
           mode="date"
           display="default"
-          onChange={handleChange}
+          onValueChange={handleValueChange}
+          onDismiss={handleDismiss}
         />
       )}
 
@@ -113,10 +123,11 @@ export function DatePickerField({ label, hint, value, onChange, placeholder = 'N
                 </TouchableOpacity>
               </View>
               <DateTimePicker
-                value={parseDate(value)}
+                value={pendingDate ?? parseDate(value)}
                 mode="date"
                 display="spinner"
-                onChange={handleChange}
+                onValueChange={handleValueChange}
+                onDismiss={handleDismiss}
                 style={styles.iosPicker}
                 textColor={theme.text}
               />

@@ -5,7 +5,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { EmployeesStack } from './EmployeesStack';
 import { PayrollStack } from './PayrollStack';
 import { PayslipsStack } from './PayslipsStack';
-import { SyncScreen } from '../screens/sync/SyncScreen';
+import { SettingsStack } from './SettingsStack';
 
 export type RootTabParamList = {
   EmployeesTab: undefined;
@@ -63,11 +63,11 @@ export function RootNavigator() {
       />
       <Tab.Screen
         name="SyncTab"
-        component={SyncScreen}
+        component={SettingsStack}
         options={{
-          tabBarLabel: 'Sync',
+          tabBarLabel: 'Settings',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="sync" size={size} color={color} />
+            <Ionicons name="settings-sharp" size={size} color={color} />
           ),
         }}
       />

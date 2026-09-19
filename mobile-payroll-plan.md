@@ -268,12 +268,18 @@ Allow the admin to open a new payroll run for an employee, review the auto-compu
 Provide a clean, readable in-app view of committed payslips grouped by month (most recent first), scoped to the current year, with a stats header that recalculates when an employee filter is applied.
 
 **Expected Outcomes**
-- `PayslipListScreen` shows all committed payslips for the current year, grouped by month in reverse-chronological order (July → January).
-- Header shows three stats: **Year to Date**, **current month name** total, and a **Q1 | Q2 | Q3 | Q4** breakdown row — all calculated from the currently visible set.
-- Employee filter pills (All + one per active employee) are shown below the header. Selecting a pill filters the list AND recalculates all header stats for that employee. The header label updates from "2025 Pay Records" to "{Employee Name} · 2025".
-- Months with no payslips render as a faint collapsed placeholder row — present but visually recede.
-- `PayslipDetailScreen` shows: employee name, pay period, hours worked, hourly rate, gross pay, each line item (label + amount, colour-coded by type), net pay.
-- Data is read-only — no editing from this screen.
+- Tab is labelled **Pay Records** (not "Payslips").
+- `PayslipListScreen` page heading is **Pay Records**. Shows all committed payslips for the current year, grouped by month in reverse-chronological order. Header label: `"2025 Pay Records"` or `"{Employee Name} · 2025"` when filtered.
+- Header shows three stats: **Year to Date**, **current month name** total, and a **Q1 | Q2 | Q3 | Q4** breakdown row.
+- Employee filter pills (All + one per active employee) filter the list and recalculate all stats.
+- Months with no payslips render as a faint placeholder.
+- `PayslipDetailScreen` shows: employee name (ALL CAPS, bold), pay period in `Sep 21, 2026 – Sep 25, 2026` format, base pay breakdown, line items colour-coded by type, net pay summary.
+- Currency displayed as `PHP` throughout (not `$`).
+- No "My Business" header — employee name is the top element.
+- **Delete & Regenerate** button at the bottom: confirms, deletes the payslip, reverts the payroll run to `draft`, navigates to `PayrollRunList` (stack reset to `[PayrollEmployeeList → PayrollRunList]`).
+- Payslip detail lives in the **Payroll tab stack** (not the Pay Records tab) — the active tab stays on Payroll when a payslip is opened after commit.
+- Back button on `PayslipDetailScreen` navigates to `PayrollRunList` via stack reset (no circular history).
+- Data is read-only except for the Delete & Regenerate action.
 
 **Todo List**
 1. Create `src/screens/payslips/PayslipListScreen.tsx` — grouped-by-month list, all 12 months of current year shown, empty months as placeholders.
@@ -281,16 +287,21 @@ Provide a clean, readable in-app view of committed payslips grouped by month (mo
 3. Implement header stat calculation: YTD total, current-month total, per-quarter totals — derived from filtered payslip set.
 4. Update header label to show employee name when a filter is active, revert to "2025 Pay Records" for All.
 5. Create `src/screens/payslips/PayslipDetailScreen.tsx` — full breakdown view joining `payroll_runs` + `line_items`.
-6. Create `src/components/PayslipCard.tsx` — reusable receipt-style row with avatar initials, name, period, hours, net pay.
+6. Create `src/components/PayslipCard.tsx` — reusable receipt-style row with avatar initials, name, period, net pay.
 7. Create `src/components/LineItemRow.tsx` — row with label, amount, and inclusion/deduction colouring.
 8. Connect to `src/db/queries/payslips.ts` and `src/db/queries/lineItems.ts`.
-9. Manually verify filter + stat recalculation works correctly for each employee and for All.
+9. Add `deletePayslip` to `src/db/queries/payslips.ts`.
+10. Add `deletePayslipAndRevertRun` to `src/store/payslipStore.ts` — deletes payslip, reverts run to `draft`.
+11. Add `PayslipDetail` screen to `PayrollStack` so it opens within the Payroll tab.
+12. Manually verify filter + stat recalculation works correctly for each employee and for All.
 
 **Relevant Context**
 - Payslip data comes from joining `payslips` → `payroll_runs` → `line_items` using DB helpers (Sub-Task 2).
 - No export/PDF — in-app view only.
-- Filter pill behaviour approved in UI/UX prototype review: selecting an employee recalculates all stats (Option B).
+- Filter pill behaviour: selecting an employee recalculates all stats.
 - Quarter mapping: Q1 = Jan–Mar, Q2 = Apr–Jun, Q3 = Jul–Sep, Q4 = Oct–Dec.
+- Currency: `PHP` prefix everywhere, `toLocaleString('en-US', { minimumFractionDigits: 2 })`.
+- Period format: `Sep 21, 2026 – Sep 25, 2026` (same helper used across all screens).
 
 ---
 
@@ -334,37 +345,37 @@ Allow the admin to back up the full local database to S3 as a JSON snapshot and 
 Wire all screens together with a coherent navigation structure, finalise the app entry point, and implement a user-toggleable light/dark theme that persists across sessions.
 
 **Expected Outcomes**
-- Bottom tab navigator with three tabs: Employees, Payslips, Sync.
-- Stack navigators within Employees (list → form → run history → run form) and Payslips (list → detail).
+- Bottom tab navigator with four tabs: **Employees**, **Payroll**, **Pay Records**, **Sync**.
+- Stack navigators:
+  - `EmployeesStack`: EmployeeList → EmployeeForm
+  - `PayrollStack`: PayrollEmployeeList → PayrollRunList → PayrollRunForm → **PayslipDetail**
+  - `PayslipsStack`: PayslipList → PayslipDetail (Pay Records tab — separate instance)
+- `PayslipDetail` is registered in `PayrollStack` so the active tab stays on Payroll when a payslip is opened after committing a run.
 - `App.tsx` initialises the DB (Sub-Task 2) before rendering the navigator.
 - Splash screen waits for DB init to complete before showing the app.
 - **Light/dark theme toggle** accessible from the Sync screen (settings area).
-  - Two complete theme token sets: `darkTheme` and `lightTheme` (colours matching the approved prototypes).
+  - Two complete theme token sets: `darkTheme` and `lightTheme`.
   - Active theme stored in `expo-secure-store` under key `app_theme` and restored on launch.
-  - `ThemeContext` (React context) provides the active theme object and a `toggleTheme()` function to the entire component tree.
-  - All screens and components consume colours exclusively from `ThemeContext` — no hardcoded colour values anywhere.
-  - Toggle renders as a labelled switch ("Dark / Light") on the Sync screen.
+  - `ThemeContext` provides `theme`, `isDark`, and `toggleTheme()` to the entire tree.
+  - All screens consume colours exclusively from `useTheme()` — no hardcoded values.
   - Theme change takes effect immediately without app restart.
 
 **Todo List**
-1. Create `src/navigation/RootNavigator.tsx` — bottom tab navigator with three tabs.
-2. Create `src/navigation/EmployeesStack.tsx` — stack: EmployeeList → EmployeeForm → PayrollRunList → PayrollRunForm.
-3. Create `src/navigation/PayslipsStack.tsx` — stack: PayslipList → PayslipDetail.
-4. Update `App.tsx` — run DB init on mount, show loading indicator until ready, then render `RootNavigator` wrapped in `ThemeProvider`.
-5. Create `src/theme/tokens.ts` — define `darkTheme` and `lightTheme` token objects (background, surface, border, text, textMuted, accent, inclusion, deduction, badge colours).
-6. Create `src/theme/ThemeContext.tsx` — React context exposing `theme`, `isDark`, and `toggleTheme()`; reads/writes `expo-secure-store` for persistence.
-7. Wrap `App.tsx` root with `ThemeProvider` from `ThemeContext`.
-8. Refactor all screens and shared components to consume theme tokens from `useTheme()` hook instead of hardcoded values.
-9. Add theme toggle switch to `SyncScreen.tsx`.
-10. Add tab icons using `@expo/vector-icons`.
-11. Manually verify theme toggle on iOS and Android simulators; confirm preference persists after app restart.
+1. Create `src/navigation/RootNavigator.tsx` — bottom tab navigator with four tabs.
+2. Create `src/navigation/EmployeesStack.tsx` — stack: EmployeeList → EmployeeForm.
+3. Create `src/navigation/PayrollStack.tsx` — stack: PayrollEmployeeList → PayrollRunList → PayrollRunForm → PayslipDetail.
+4. Create `src/navigation/PayslipsStack.tsx` — stack: PayslipList → PayslipDetail.
+5. Update `App.tsx` — run DB init on mount, show loading indicator until ready, then render `RootNavigator` wrapped in `ThemeProvider`.
+6. Create `src/theme/tokens.ts` — define `darkTheme` and `lightTheme` token objects.
+7. Create `src/theme/ThemeContext.tsx` — React context with persistence via `expo-secure-store`.
+8. Add theme toggle switch to `SyncScreen.tsx`.
+9. Add tab icons using `@expo/vector-icons`.
 
 **Relevant Context**
-- DB initialisation from Sub-Task 2 (`src/db/index.ts`) must complete before any screen mounts.
-- Employees, Payroll, and Payslips screens reference each other via navigation params (e.g. `employeeId`).
-- Dark theme tokens map to `prototype.html`; light theme tokens map to `prototype-light.html`.
-- `expo-secure-store` is already a dependency from Sub-Task 7 — no new package needed.
-- Do not use React Native's built-in `Appearance` API for the toggle — the user's explicit in-app preference must always override the system setting.
+- DB initialisation from Sub-Task 2 must complete before any screen mounts.
+- `PayslipDetail` in `PayrollStack` receives `{ payslipId, employeeId, employeeName }` params; back button and Delete & Regenerate both use `navigation.reset` to `[PayrollEmployeeList → PayrollRunList]`.
+- Pay Records tab (`PayslipsStack`) is a separate read-only list — it does not handle the post-commit navigation.
+- `expo-secure-store` is already a dependency from Sub-Task 7.
 
 ---
 
@@ -416,20 +427,61 @@ Employees must be assigned to a department. Departments are a simple lookup tag 
 - Migration: `ALTER TABLE employees ADD COLUMN department_id TEXT REFERENCES departments(id)` runs once on app launch for existing databases; `try/catch` silently ignores the duplicate-column error on clean installs.
 
 **Todo List**
-1. [ ] `src/db/schema.ts` — add `CREATE_DEPARTMENTS_TABLE` and `MIGRATE_EMPLOYEES_ADD_DEPARTMENT`
-2. [ ] `src/db/index.ts` — run migration after schema creation
-3. [ ] `src/domain/types.ts` — add `Department` interface; add `department_id: string | null` to `Employee`
-4. [ ] `src/db/queries/departments.ts` — `getDepartments`, `getDepartmentById`, `insertDepartment`, `upsertDepartmentByName`, `deleteDepartment`
-5. [ ] `src/db/queries/employees.ts` — `department_id` in `EmployeeRow`, `mapEmployeeRow`, `insertEmployee`, `updateEmployee`
-6. [ ] `src/store/departmentStore.ts` — `loadDepartments`, `ensureDepartment`, `deleteDepartment`
-7. [ ] `src/screens/employees/EmployeeFormScreen.tsx` — Department field with autocomplete; `ensureDepartment` on save
-8. [ ] `src/screens/employees/EmployeeListScreen.tsx` — department badge on employee cards
-9. [ ] `src/sync/serialise.ts` — `departments` in dump and restore
-10. [ ] `prototype.html` — department badges on employee list cards; Department field in Add/Edit forms
-11. [ ] `prototype-light.html` — same as above, light theme colours
+1. [x] `src/db/schema.ts` — add `CREATE_DEPARTMENTS_TABLE` and `MIGRATE_EMPLOYEES_ADD_DEPARTMENT`
+2. [x] `src/db/index.ts` — run migration after schema creation
+3. [x] `src/domain/types.ts` — add `Department` interface; add `department_id: string | null` to `Employee`
+4. [x] `src/db/queries/departments.ts` — `getDepartments`, `getDepartmentById`, `insertDepartment`, `upsertDepartmentByName`, `deleteDepartment`
+5. [x] `src/db/queries/employees.ts` — `department_id` in `EmployeeRow`, `mapEmployeeRow`, `insertEmployee`, `updateEmployee`
+6. [x] `src/store/departmentStore.ts` — `loadDepartments`, `ensureDepartment`, `deleteDepartment`
+7. [x] `src/screens/employees/EmployeeFormScreen.tsx` — Department field with autocomplete; `ensureDepartment` on save
+8. [x] `src/screens/employees/EmployeeListScreen.tsx` — department badge on employee cards
+9. [x] `src/sync/serialise.ts` — `departments` in dump and restore
+10. [x] `prototype.html` — department badges on employee list cards; Department field in Add/Edit forms
+11. [x] `prototype-light.html` — same as above, light theme colours
 
 **Relevant Context**
 - No separate Departments screen — managed entirely inline from the employee form.
 - `upsertDepartmentByName` uses `COLLATE NOCASE` to avoid case-sensitive duplicates.
 - `department_id` is `NULL` for employees without a department — field is optional.
 - `departments` table must appear before `employees` in `ALL_SCHEMAS` (FK dependency).
+
+---
+
+### Sub-Task 11 — Payroll & Payslip UX Refinements
+
+**Status:** `[x] complete`
+
+**Intent**
+Polish the payroll run and payslip flows based on real usage feedback: fix navigation bugs, clean up the draft management model, standardise currency display, and tighten the payslip detail screen.
+
+**Changes Delivered**
+
+#### Payroll Run List (`PayrollRunListScreen`)
+- **Always-visible `+ New Payroll` button** — shown regardless of whether a draft exists.
+- **All drafts listed** — multiple active drafts render as individual cards under an "Active Drafts" section.
+- **Committed runs** listed below drafts as before.
+- **Auto-draft generation** — on mount, if no draft exists, automatically creates one for the most recent pay period that has already started (`period.start <= today`). Never pre-generates future periods. Skipped for archived employees.
+- Empty state message is "No committed runs yet." (button is always visible).
+
+#### Payslip Detail (`PayslipDetailScreen`)
+- **Currency** — `PHP` prefix everywhere (was `$`).
+- **"My Business" header removed** — employee name is the first element, displayed ALL CAPS + bold (`fontWeight: 800`, `textTransform: uppercase`).
+- **Period format** — `Sep 21, 2026 – Sep 25, 2026` (same `formatPeriod` helper used across all screens).
+- **Delete & Regenerate button** — bottom of screen; confirms, deletes the payslip record, reverts the payroll run status to `draft`, navigates to `PayrollRunList` via `navigation.reset` to avoid circular back history.
+- **Back button** — custom `headerLeft`; navigates to `PayrollRunList` via `navigation.reset([PayrollEmployeeList, PayrollRunList])`.
+- Screen lives in `PayrollStack` — Payroll tab stays active when opened after a commit.
+
+#### Pay Records tab (`PayslipListScreen`)
+- Tab label renamed **Pay Records** (was "Payslips").
+- Page heading renamed **Pay Records**.
+- Currency: `PHP` prefix.
+
+#### Navigation fixes
+- `PayslipDetail` added to `PayrollStack` — opened from `PayrollRunFormScreen` (post-commit) and `PayrollRunListScreen` (tap committed run) without switching tabs.
+- Post-commit navigation: `PayrollRunFormScreen` navigates directly to `PayslipDetail` in the Payroll stack, passing `{ payslipId, employeeId, employeeName }`.
+- Tapping a committed run in `PayrollRunListScreen` opens `PayslipDetail` in the same stack.
+- Back and Delete & Regenerate both use `navigation.reset` to land on `PayrollRunList` with correct history (`PayrollEmployeeList` as the parent).
+
+#### Bug fixes
+- Fixed `draftRun` → `draftRuns` undefined variable crash in `PayrollRunListScreen`.
+- Removed `initRuns` from focus listener (was causing duplicate draft creation on every screen re-focus).

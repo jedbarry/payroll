@@ -5,7 +5,6 @@ import {
   StyleSheet,
   Switch,
   ScrollView,
-  TextInput,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
@@ -13,163 +12,82 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/ThemeContext';
 import {
-  loadCredentials,
-  saveCredentials,
-  secureStorage,
-  type S3Config,
-} from '../../sync/credentialStore';
-import { exportToS3, importFromS3 } from '../../sync/s3Sync';
-import { exportToFiles, importFromFiles } from '../../sync/fileBackup';
+  listDeviceBackups,
+  saveDeviceBackup,
+  restoreFromPicker,
+  type DeviceBackupEntry,
+} from '../../sync/fileBackup';
 
-const LAST_EXPORT_KEY = 'last_export_at';
-
-export function SyncScreen() {
+export function SyncScreen({ navigation }: any) {
   const { theme, isDark, toggleTheme } = useTheme();
 
-  const [region, setRegion] = useState('');
-  const [bucket, setBucket] = useState('');
-  const [s3Key, setS3Key] = useState('');
-  const [accessKeyId, setAccessKeyId] = useState('');
-  const [secretAccessKey, setSecretAccessKey] = useState('');
+  const [backups, setBackups] = useState<DeviceBackupEntry[]>([]);
+  const [backingUp, setBackingUp] = useState(false);
+  const [restoringFromFile, setRestoringFromFile] = useState(false);
 
-  const [lastExportAt, setLastExportAt] = useState<string | null>(null);
-  const [exportingFiles, setExportingFiles] = useState(false);
-  const [importingFiles, setImportingFiles] = useState(false);
-  const [exporting, setExporting] = useState(false);
-  const [importing, setImporting] = useState(false);
+  const loadBackups = useCallback(async () => {
+    try {
+      const list = await listDeviceBackups();
+      setBackups(list);
+    } catch {
+      // ignore
+    }
+  }, []);
 
-  // Load saved credentials + last export timestamp on mount
   useEffect(() => {
-    loadCredentials().then((config) => {
-      if (config) {
-        setRegion(config.region);
-        setBucket(config.bucket);
-        setS3Key(config.key);
-        setAccessKeyId(config.accessKeyId);
-        setSecretAccessKey(config.secretAccessKey);
-      }
-    });
-    secureStorage.getItem(LAST_EXPORT_KEY).then(setLastExportAt);
-  }, []);
+    loadBackups();
+  }, [loadBackups]);
 
-  const currentConfig = useCallback(
-    (): S3Config => ({
-      region,
-      bucket,
-      key: s3Key,
-      accessKeyId,
-      secretAccessKey,
-    }),
-    [region, bucket, s3Key, accessKeyId, secretAccessKey],
-  );
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', loadBackups);
+    return unsubscribe;
+  }, [navigation, loadBackups]);
 
-  const handleBlurSave = useCallback(() => {
-    saveCredentials(currentConfig());
-  }, [currentConfig]);
-
-  const busy = exportingFiles || importingFiles || exporting || importing;
-
-  const handleExportFiles = useCallback(async () => {
-    setExportingFiles(true);
+  const handleBackupNow = useCallback(async () => {
+    setBackingUp(true);
     try {
-      await exportToFiles();
-      const ts = new Date().toISOString();
-      await secureStorage.setItem(LAST_EXPORT_KEY, ts);
-      setLastExportAt(ts);
+      await saveDeviceBackup();
+      await loadBackups();
     } catch (err: any) {
-      Alert.alert('Export failed', err?.message ?? String(err));
+      Alert.alert('Backup failed', err?.message ?? String(err));
     } finally {
-      setExportingFiles(false);
+      setBackingUp(false);
     }
-  }, []);
+  }, [loadBackups]);
 
-  const handleImportFiles = useCallback(() => {
+  const handleRestoreFromFile = useCallback(() => {
     Alert.alert(
-      'Restore from Files',
-      'This will overwrite ALL local data. Are you sure?',
+      'Restore from File',
+      'Pick a backup file. This will overwrite ALL current data.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Import',
-          style: 'destructive',
+          text: 'Pick File',
           onPress: async () => {
-            setImportingFiles(true);
+            setRestoringFromFile(true);
             try {
-              const restored = await importFromFiles();
-              if (restored) Alert.alert('Import complete', 'Your data has been restored.');
+              const restored = await restoreFromPicker();
+              if (restored) Alert.alert('Restored', 'Your data has been restored successfully.');
             } catch (err: any) {
-              Alert.alert('Import failed', err?.message ?? String(err));
+              Alert.alert('Restore failed', err?.message ?? String(err));
             } finally {
-              setImportingFiles(false);
+              setRestoringFromFile(false);
             }
           },
         },
       ],
     );
   }, []);
-
-  const handleExport = useCallback(async () => {
-    setExporting(true);
-    try {
-      await exportToS3(currentConfig());
-      const ts = new Date().toISOString();
-      await secureStorage.setItem(LAST_EXPORT_KEY, ts);
-      setLastExportAt(ts);
-      Alert.alert('Export complete', 'Saved to Files and uploaded to S3.');
-    } catch (err: any) {
-      Alert.alert('Export failed', err?.message ?? String(err));
-    } finally {
-      setExporting(false);
-    }
-  }, [currentConfig]);
-
-  const handleImport = useCallback(() => {
-    Alert.alert(
-      'Restore from S3',
-      'This will overwrite ALL local data. Are you sure?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Import',
-          style: 'destructive',
-          onPress: async () => {
-            setImporting(true);
-            try {
-              await importFromS3(currentConfig());
-              Alert.alert(
-                'Import complete',
-                'Your data has been restored.',
-              );
-            } catch (err: any) {
-              Alert.alert('Import failed', err?.message ?? String(err));
-            } finally {
-              setImporting(false);
-            }
-          },
-        },
-      ],
-    );
-  }, [currentConfig]);
-
-  const isBusy = busy;
-  const formattedLastExport = lastExportAt
-    ? new Date(lastExportAt).toLocaleString()
-    : 'Never';
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.bg }]} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
-          <Text style={[styles.title, { color: theme.text }]}>Sync</Text>
+          <Text style={[styles.title, { color: theme.text }]}>Settings</Text>
         </View>
 
-        {/* Appearance / Theme Toggle Section */}
-        <View
-          style={[
-            styles.sectionCard,
-            { backgroundColor: theme.surface, borderColor: theme.border },
-          ]}
-        >
+        {/* Appearance */}
+        <View style={[styles.sectionCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <Text style={[styles.sectionTitle, { color: theme.textMuted }]}>Appearance</Text>
           <View style={styles.toggleRow}>
             <View>
@@ -189,144 +107,62 @@ export function SyncScreen() {
           </View>
         </View>
 
-        {/* Device Files Section */}
-        <View
-          style={[styles.sectionCard, { backgroundColor: theme.surface, borderColor: theme.border }]}
-        >
-          <Text style={[styles.sectionTitle, { color: theme.textMuted }]}>Device Files</Text>
-
-          <Text style={[styles.lastExportLabel, { color: theme.textMuted }]}>
-            Last export:{' '}
-            <Text style={{ color: theme.text }}>{formattedLastExport}</Text>
+        {/* Device Backup */}
+        <View style={[styles.sectionCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <Text style={[styles.sectionTitle, { color: theme.textMuted }]}>Device Backup</Text>
+          <Text style={[styles.sectionNote, { color: theme.textMuted }]}>
+            Saves a backup to this device and opens the share sheet so you can also save it to Files or iCloud. Last 5 backups are kept.
           </Text>
 
           <TouchableOpacity
-            style={[styles.button, styles.primaryButton, { backgroundColor: theme.accent }]}
-            onPress={handleExportFiles}
-            disabled={isBusy}
+            style={[styles.button, { backgroundColor: theme.accent }]}
+            onPress={handleBackupNow}
+            disabled={backingUp}
             activeOpacity={0.8}
           >
-            {exportingFiles ? (
+            {backingUp ? (
               <ActivityIndicator color={theme.accentText} />
             ) : (
-              <Text style={[styles.buttonText, { color: theme.accentText }]}>↑ Export to Files</Text>
+              <Text style={[styles.buttonText, { color: theme.accentText }]}>Backup Now</Text>
             )}
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.button, styles.outlineButton, { borderColor: theme.border }]}
-            onPress={handleImportFiles}
-            disabled={isBusy}
+            style={[styles.outlineButton, { borderColor: theme.border }]}
+            onPress={handleRestoreFromFile}
+            disabled={backingUp || restoringFromFile}
             activeOpacity={0.8}
           >
-            {importingFiles ? (
+            {restoringFromFile ? (
               <ActivityIndicator color={theme.text} />
             ) : (
-              <Text style={[styles.buttonText, { color: theme.text }]}>↓ Import from Files</Text>
+              <Text style={[styles.outlineButtonText, { color: theme.text }]}>Restore from File…</Text>
             )}
           </TouchableOpacity>
 
-          <Text style={[styles.warningText, { color: theme.textMuted }]}>
-            Export opens the share sheet (Files app, AirDrop, etc.). Import picks a snapshot and overwrites all local data.
-          </Text>
-        </View>
-
-        {/* S3 Backup Section */}
-        <View
-          style={[styles.sectionCard, { backgroundColor: theme.surface, borderColor: theme.border }]}
-        >
-          <Text style={[styles.sectionTitle, { color: theme.textMuted }]}>S3 Backup</Text>
-
-          <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>AWS Region</Text>
-          <TextInput
-            style={[styles.input, { backgroundColor: theme.bg, borderColor: theme.border, color: theme.text }]}
-            value={region}
-            onChangeText={setRegion}
-            onBlur={handleBlurSave}
-            placeholder="us-east-1"
-            placeholderTextColor={theme.textFaint}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-
-          <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>S3 Bucket</Text>
-          <TextInput
-            style={[styles.input, { backgroundColor: theme.bg, borderColor: theme.border, color: theme.text }]}
-            value={bucket}
-            onChangeText={setBucket}
-            onBlur={handleBlurSave}
-            placeholder="my-payroll-backups"
-            placeholderTextColor={theme.textFaint}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-
-          <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>S3 Key (object key)</Text>
-          <TextInput
-            style={[styles.input, { backgroundColor: theme.bg, borderColor: theme.border, color: theme.text }]}
-            value={s3Key}
-            onChangeText={setS3Key}
-            onBlur={handleBlurSave}
-            placeholder="payroll-backup.json"
-            placeholderTextColor={theme.textFaint}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-
-          <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>Access Key ID</Text>
-          <TextInput
-            style={[styles.input, { backgroundColor: theme.bg, borderColor: theme.border, color: theme.text }]}
-            value={accessKeyId}
-            onChangeText={setAccessKeyId}
-            onBlur={handleBlurSave}
-            placeholder="AKIAIOSFODNN7EXAMPLE"
-            placeholderTextColor={theme.textFaint}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-
-          <Text style={[styles.fieldLabel, { color: theme.textMuted }]}>Secret Access Key</Text>
-          <TextInput
-            style={[styles.input, { backgroundColor: theme.bg, borderColor: theme.border, color: theme.text }]}
-            value={secretAccessKey}
-            onChangeText={setSecretAccessKey}
-            onBlur={handleBlurSave}
-            placeholder="••••••••••••••••••••••••••••••••••••••••"
-            placeholderTextColor={theme.textFaint}
-            secureTextEntry={true}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-
-          <TouchableOpacity
-            style={[styles.button, styles.primaryButton, { backgroundColor: theme.accent, marginTop: 8 }]}
-            onPress={handleExport}
-            disabled={isBusy}
-            activeOpacity={0.8}
-          >
-            {exporting ? (
-              <ActivityIndicator color={theme.accentText} />
-            ) : (
-              <Text style={[styles.buttonText, { color: theme.accentText }]}>↑ Export to S3</Text>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.button, styles.dangerButton, { borderColor: theme.deduction }]}
-            onPress={handleImport}
-            disabled={isBusy}
-            activeOpacity={0.8}
-          >
-            {importing ? (
-              <ActivityIndicator color={theme.deduction} />
-            ) : (
-              <Text style={[styles.buttonText, { color: theme.deduction }]}>↓ Import from S3</Text>
-            )}
-          </TouchableOpacity>
-
-          <Text style={[styles.warningText, { color: theme.textMuted }]}>
-            S3 Export saves to Files first, then uploads. S3 Import overwrites all local data.
-          </Text>
+          {/* Backup list */}
+          {backups.length === 0 ? (
+            <Text style={[styles.emptyText, { color: theme.textFaint }]}>No backups yet.</Text>
+          ) : (
+            backups.map((entry) => (
+              <TouchableOpacity
+                key={entry.uri}
+                style={[styles.backupRow, { borderTopColor: theme.border }]}
+                onPress={() => navigation.navigate('BackupDetail', { entry })}
+                activeOpacity={0.7}
+              >
+                <View style={styles.backupInfo}>
+                  <Text style={[styles.backupDate, { color: theme.text }]}>
+                    {formatBackupDate(entry.createdAt)}
+                  </Text>
+                  <Text style={[styles.backupFilename, { color: theme.textMuted }]}>
+                    {entry.filename}
+                  </Text>
+                </View>
+                <Text style={[styles.chevron, { color: theme.textMuted }]}>›</Text>
+              </TouchableOpacity>
+            ))
+          )}
         </View>
 
       </ScrollView>
@@ -334,23 +170,82 @@ export function SyncScreen() {
   );
 }
 
+function formatBackupDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  } catch {
+    return iso;
+  }
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: 16, paddingBottom: 40 },
   header: { paddingHorizontal: 4, paddingTop: 12, paddingBottom: 16 },
   title: { fontSize: 28, fontWeight: '700' },
-  sectionCard: { padding: 16, borderRadius: 12, borderWidth: 1, marginBottom: 16 },
-  sectionTitle: { fontSize: 13, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 },
-  toggleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  sectionCard: {
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
+  sectionNote: {
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   toggleLabel: { fontSize: 16, fontWeight: '600' },
   toggleSublabel: { fontSize: 13, marginTop: 2 },
-  fieldLabel: { fontSize: 13, fontWeight: '500', marginBottom: 4, marginTop: 12 },
-  input: { height: 44, borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, fontSize: 15 },
-  lastExportLabel: { fontSize: 14, marginBottom: 16 },
-  button: { height: 48, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  primaryButton: {},
-  outlineButton: { backgroundColor: 'transparent', borderWidth: 1.5 },
-  dangerButton: { backgroundColor: 'transparent', borderWidth: 1.5 },
+  button: {
+    height: 48,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
   buttonText: { fontSize: 16, fontWeight: '600' },
-  warningText: { fontSize: 13, marginTop: 4, textAlign: 'center' },
+  outlineButton: {
+    height: 48,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  outlineButtonText: { fontSize: 15, fontWeight: '600' },
+  emptyText: {
+    fontSize: 14,
+    textAlign: 'center',
+    paddingVertical: 12,
+    fontStyle: 'italic',
+  },
+  backupRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderTopWidth: 1,
+  },
+  backupInfo: { flex: 1, marginRight: 12 },
+  backupDate: { fontSize: 14, fontWeight: '600' },
+  backupFilename: { fontSize: 11, marginTop: 2 },
+  chevron: { fontSize: 22, fontWeight: '300' },
 });

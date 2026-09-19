@@ -8,7 +8,11 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.payroll"
+      "bundleIdentifier": "com.anonymous.payroll",
+      "infoPlist": {
+        "UIFileSharingEnabled": true,
+        "LSSupportsOpeningDocumentsInPlace": true
+      }
     },
     "android": {
       "adaptiveIcon": {
