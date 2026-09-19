@@ -11,6 +11,9 @@ import { useTheme } from '../../theme/ThemeContext';
 import { usePayrollStore } from '../../store/payrollStore';
 import { PayrollRun } from '../../domain/types';
 import { getDb } from '../../db/index';
+import { getEmployeeById } from '../../db/queries/employees';
+import { getPayrollRunsByEmployee } from '../../db/queries/payrollRuns';
+import { getPayPeriods, getBaseAmount } from '../../domain/payPeriod';
 
 function formatCurrency(amount: number): string {
   return `PHP ${amount.toLocaleString('en-US', {
@@ -30,7 +33,7 @@ function formatPeriod(start: string, end: string): string {
 export function PayrollRunListScreen({ route, navigation }: any) {
   const { theme } = useTheme();
   const { employeeId, employeeName } = route.params || {};
-  const { runs, loading, loadRunsForEmployee } = usePayrollStore();
+  const { runs, loading, loadRunsForEmployee, saveDraft } = usePayrollStore();
 
   useEffect(() => {
     navigation.setOptions({
@@ -39,14 +42,69 @@ export function PayrollRunListScreen({ route, navigation }: any) {
   }, [navigation, employeeName]);
 
   useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
-      if (employeeId) {
-        loadRunsForEmployee(employeeId);
+    async function initRuns() {
+      if (!employeeId) return;
+      await loadRunsForEmployee(employeeId);
+
+      // Auto-create a draft if none exists
+      const existing = await getPayrollRunsByEmployee(employeeId);
+      const hasDraft = existing.some((r) => r.status === 'draft');
+      if (hasDraft) return;
+
+      const emp = await getEmployeeById(employeeId);
+      if (!emp) return;
+
+      const existingPeriodKeys = new Set(
+        existing.map((r) => `${r.period_start}_${r.period_end}`),
+      );
+
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const startYear = emp.start_date
+        ? parseInt(emp.start_date.substring(0, 4), 10)
+        : currentYear;
+
+      const all: Array<{ start: string; end: string; month: number; year: number }> = [];
+      for (let yr = startYear; yr <= currentYear; yr++) {
+        for (let m = 0; m < 12; m++) {
+          const periods = getPayPeriods(emp.pay_schedule, emp.pay_day_config, m, yr);
+          for (const p of periods) {
+            if (emp.start_date && p.end < emp.start_date) continue;
+            if (emp.archive_date && p.start > emp.archive_date) continue;
+            if (existingPeriodKeys.has(`${p.start}_${p.end}`)) continue;
+            all.push({ ...p, month: m, year: yr });
+          }
+        }
       }
-    });
-    if (employeeId) {
-      loadRunsForEmployee(employeeId);
+
+      if (all.length === 0) return;
+
+      const todayStr = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`;
+      const period =
+        all.find((p) => p.start <= todayStr && p.end >= todayStr) ??
+        all.find((p) => p.start > todayStr) ??
+        [...all].reverse().find((p) => p.end < todayStr) ??
+        all[0];
+
+      if (!period) return;
+
+      const base = getBaseAmount(emp.monthly_rate, emp.pay_schedule, period.month, period.year);
+      await saveDraft(
+        {
+          employee_id: employeeId,
+          period_start: period.start,
+          period_end: period.end,
+          base_amount: base,
+          gross_pay: base,
+          net_pay: base,
+          status: 'draft',
+        },
+        [],
+      );
     }
+
+    const unsubscribe = navigation.addListener('focus', initRuns);
+    initRuns();
     return unsubscribe;
   }, [navigation, employeeId, loadRunsForEmployee]);
 
