@@ -23,6 +23,14 @@ export const MIGRATE_EMPLOYEES_ADD_DEPARTMENT = `
 ALTER TABLE employees ADD COLUMN department_id TEXT REFERENCES departments(id);
 `;
 
+export const MIGRATE_EMPLOYEES_ADD_START_DATE = `
+ALTER TABLE employees ADD COLUMN start_date TEXT;
+`;
+
+export const MIGRATE_EMPLOYEES_ADD_ARCHIVE_DATE = `
+ALTER TABLE employees ADD COLUMN archive_date TEXT;
+`;
+
 export const CREATE_PAYROLL_RUNS_TABLE = `
 CREATE TABLE IF NOT EXISTS payroll_runs (
   id TEXT PRIMARY KEY,

@@ -29,7 +29,7 @@ const MONTH_NAMES = [
 ];
 
 function formatCurrency(amount: number): string {
-  return `$${amount.toLocaleString('en-US', {
+  return `PHP ${amount.toLocaleString('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
@@ -40,20 +40,30 @@ export function PayslipListScreen({ navigation }: any) {
   const currentYear = new Date().getFullYear();
   const currentMonthIdx = new Date().getMonth();
 
-  const { payslips, loading, loadPayslipsForYear } = usePayslipStore();
-  const { employees, loadEmployees } = useEmployeeStore();
+  const {
+    payslips,
+    loading,
+    availableYears,
+    selectedYear,
+    loadPayslipsForYear,
+    loadAvailableYears,
+    setSelectedYear,
+  } = usePayslipStore();
+  const { allEmployees, loadEmployees } = useEmployeeStore();
 
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      loadPayslipsForYear(currentYear);
+      loadAvailableYears();
+      loadPayslipsForYear(selectedYear);
       loadEmployees();
     });
-    loadPayslipsForYear(currentYear);
+    loadAvailableYears();
+    loadPayslipsForYear(selectedYear);
     loadEmployees();
     return unsubscribe;
-  }, [navigation, currentYear, loadPayslipsForYear, loadEmployees]);
+  }, [navigation]);
 
   // Filtered payslips
   const filteredPayslips = useMemo(() => {
@@ -106,10 +116,13 @@ export function PayslipListScreen({ navigation }: any) {
     return groups;
   }, [filteredPayslips]);
 
-  const selectedEmployeeName = employees.find((e) => e.id === selectedEmployeeId)?.name;
+  // For current year: only show months up to today. For past years: show all 12.
+  const maxMonthIdx = selectedYear === currentYear ? currentMonthIdx : 11;
+
+  const selectedEmployeeName = allEmployees.find((e) => e.id === selectedEmployeeId)?.name;
   const headerLabel = selectedEmployeeName
-    ? `${selectedEmployeeName} · ${currentYear}`
-    : `${currentYear} Pay Records`;
+    ? `${selectedEmployeeName} · ${selectedYear}`
+    : `${selectedYear} Pay Records`;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.bg }]} edges={['top']}>
@@ -118,6 +131,44 @@ export function PayslipListScreen({ navigation }: any) {
         <View style={styles.header}>
           <Text style={[styles.title, { color: theme.text }]}>Payslips</Text>
         </View>
+
+        {/* Year selector */}
+        {availableYears.length > 1 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.yearTabsRow}
+          >
+            {availableYears.map((yr) => {
+              const isSelected = yr === selectedYear;
+              return (
+                <TouchableOpacity
+                  key={yr}
+                  style={[
+                    styles.yearTab,
+                    {
+                      borderBottomColor: isSelected ? theme.accent : 'transparent',
+                      borderBottomWidth: 2,
+                    },
+                  ]}
+                  onPress={() => {
+                    setSelectedEmployeeId(null);
+                    setSelectedYear(yr);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.yearTabText,
+                      { color: isSelected ? theme.accent : theme.textMuted },
+                    ]}
+                  >
+                    {yr}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        )}
 
         {/* Header Stats Panel */}
         <View
@@ -190,7 +241,7 @@ export function PayslipListScreen({ navigation }: any) {
             </Text>
           </TouchableOpacity>
 
-          {employees.map((emp) => {
+          {allEmployees.map((emp) => {
             const isSelected = selectedEmployeeId === emp.id;
             return (
               <TouchableOpacity
@@ -224,7 +275,7 @@ export function PayslipListScreen({ navigation }: any) {
           </View>
         ) : (
           <View style={styles.monthsContainer}>
-            {Array.from({ length: 12 }, (_, i) => 11 - i).map((monthIdx) => {
+            {Array.from({ length: maxMonthIdx + 1 }, (_, i) => maxMonthIdx - i).map((monthIdx) => {
               const monthPayslips = monthlyGroups[monthIdx] || [];
               return (
                 <View key={monthIdx} style={styles.monthSection}>
@@ -275,6 +326,19 @@ export function PayslipListScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
+  yearTabsRow: {
+    paddingHorizontal: 16,
+    gap: 4,
+    marginBottom: 4,
+  },
+  yearTab: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  yearTabText: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
   container: {
     flex: 1,
   },

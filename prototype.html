@@ -460,20 +460,67 @@
         </div>
         <div style="margin-top:4px">
           <button class="btn-primary" onclick="show('s-emp-list')">Save Changes</button>
-          <button class="btn-secondary" onclick="show('s-payroll-run-list')">Run History &amp; New Run</button>
           <button class="btn-danger">Archive Employee</button>
         </div>
       </div>
     </div>
 
     <!-- ══════════════════════════════════════════════════════
-         SCREEN: Run History (per employee, under Employees stack)
+         SCREEN: Payroll tab — Employee list
+    ══════════════════════════════════════════════════════ -->
+    <div class="screen" id="s-payroll-list">
+      <div class="nav-header">
+        <h2>Payroll</h2>
+      </div>
+      <div class="scroll-content" style="padding-bottom:80px">
+        <p class="section-label">Active Employees</p>
+        <div class="card" onclick="show('s-payroll-run-list')">
+          <div class="card-row">
+            <div>
+              <div class="card-title">Sarah Mitchell</div>
+              <div class="card-sub">Bi-weekly · Last run Oct 15 – Oct 31</div>
+            </div>
+            <span class="chev">›</span>
+          </div>
+        </div>
+        <div class="card" onclick="show('s-payroll-run-list')">
+          <div class="card-row">
+            <div>
+              <div class="card-title">James Okafor</div>
+              <div class="card-sub">Weekly · Last run Oct 26 – Oct 30</div>
+            </div>
+            <span class="chev">›</span>
+          </div>
+        </div>
+        <div class="card" onclick="show('s-payroll-run-list')">
+          <div class="card-row">
+            <div>
+              <div class="card-title">Priya Nair</div>
+              <div class="card-sub">Monthly · Last run Oct 1 – Oct 31</div>
+            </div>
+            <span class="chev">›</span>
+          </div>
+        </div>
+        <div class="card" onclick="show('s-payroll-run-list')">
+          <div class="card-row">
+            <div>
+              <div class="card-title">Tom Harrington</div>
+              <div class="card-sub">Bi-weekly · Last run Oct 1 – Oct 14</div>
+            </div>
+            <span class="chev">›</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════
+         SCREEN: Payroll Run List (per employee, from Payroll tab)
     ══════════════════════════════════════════════════════ -->
     <div class="screen" id="s-payroll-run-list">
       <div class="nav-header">
-        <button class="back-btn" onclick="show('s-emp-form-edit')">‹ Sarah Mitchell</button>
-        <h2>Run History</h2>
-        <button class="action-btn" onclick="show('s-payroll-form')">+ Run</button>
+        <button class="back-btn" onclick="show('s-payroll-list')">‹ Payroll</button>
+        <h2>Sarah Mitchell</h2>
+        <button class="action-btn" onclick="show('s-payroll-form')">+ New</button>
       </div>
       <div class="scroll-content">
         <!-- Draft card -->
@@ -538,8 +585,8 @@
     ══════════════════════════════════════════════════════ -->
     <div class="screen" id="s-payroll-form">
       <div class="nav-header">
-        <button class="back-btn" onclick="show('s-payroll-run-list')">‹ Run History</button>
-        <h2>Payroll Run</h2>
+        <button class="back-btn" onclick="show('s-payroll-run-list')">‹ Sarah Mitchell</button>
+        <h2>Payroll</h2>
       </div>
       <div class="scroll-content">
         <!-- Period + employee info bar -->
@@ -631,15 +678,17 @@
     ══════════════════════════════════════════════════════ -->
     <div class="screen" id="s-payslip-list">
       <div style="background:#0d1117;padding:16px 20px 14px;border-bottom:1px solid #1e293b;flex-shrink:0;">
-        <div id="ps-header-label" style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#334155;margin-bottom:10px;">2025 Pay Records</div>
+        <!-- Year tabs -->
+        <div id="ps-year-tabs" style="display:flex;gap:0;margin-bottom:12px;border-bottom:1px solid #1e293b;"></div>
+        <div id="ps-header-label" style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#334155;margin-bottom:10px;">2026 Pay Records</div>
         <div style="display:flex;gap:8px;margin-bottom:8px;">
           <div style="flex:1;background:#0f172a;border-radius:10px;padding:10px 12px;border:1px solid #1e293b;">
             <div style="font-size:10px;color:#334155;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">Year to Date</div>
-            <div id="ps-stat-ytd" style="font-size:17px;font-weight:700;color:#64748b;">$23,335</div>
+            <div id="ps-stat-ytd" style="font-size:17px;font-weight:700;color:#64748b;">PHP 0</div>
           </div>
           <div style="flex:1;background:#0f172a;border-radius:10px;padding:10px 12px;border:1px solid #1e293b;">
-            <div id="ps-stat-month-label" style="font-size:10px;color:#334155;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">July</div>
-            <div id="ps-stat-month" style="font-size:17px;font-weight:700;color:#64748b;">$855</div>
+            <div id="ps-stat-month-label" style="font-size:10px;color:#334155;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">October</div>
+            <div id="ps-stat-month" style="font-size:17px;font-weight:700;color:#64748b;">PHP 0</div>
           </div>
         </div>
         <div style="display:flex;gap:8px;">
@@ -649,11 +698,11 @@
           </div>
           <div style="flex:1;background:#0f172a;border-radius:8px;padding:8px 10px;border:1px solid #1e293b;">
             <div style="font-size:9px;color:#334155;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">Q2</div>
-            <div id="ps-q2" style="font-size:13px;font-weight:700;color:#475569;">$6,240</div>
+            <div id="ps-q2" style="font-size:13px;font-weight:700;color:#475569;">—</div>
           </div>
-          <div style="flex:1;background:#0f172a;border-radius:8px;padding:8px 10px;border:1px solid #293548;">
+          <div style="flex:1;background:#0f172a;border-radius:8px;padding:8px 10px;border:1px solid #1e293b;">
             <div style="font-size:9px;color:#475569;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">Q3</div>
-            <div id="ps-q3" style="font-size:13px;font-weight:700;color:#64748b;">$17,095</div>
+            <div id="ps-q3" style="font-size:13px;font-weight:700;color:#64748b;">—</div>
           </div>
           <div style="flex:1;background:#0f172a;border-radius:8px;padding:8px 10px;border:1px solid #1e293b;">
             <div style="font-size:9px;color:#334155;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">Q4</div>
@@ -797,23 +846,29 @@
 
   </div><!-- /screen-area -->
 
-  <!-- Bottom Tab Bar — 3 tabs -->
+  <!-- Bottom Tab Bar — 4 tabs -->
   <div class="tab-bar">
-    <button class="tab-item active" id="tab-emp" onclick="goTab('emp')">
+    <button class="tab-item active" id="tab-emp" onclick="goTab('emp')" style="font-size:10px">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
         <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
       </svg>
       Employees
     </button>
-    <button class="tab-item" id="tab-payslips" onclick="goTab('payslips')">
+    <button class="tab-item" id="tab-payroll" onclick="goTab('payroll')" style="font-size:10px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
+      </svg>
+      Payroll
+    </button>
+    <button class="tab-item" id="tab-payslips" onclick="goTab('payslips')" style="font-size:10px">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-        <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+        <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
       </svg>
       Payslips
     </button>
-    <button class="tab-item" id="tab-sync" onclick="goTab('sync')">
+    <button class="tab-item" id="tab-sync" onclick="goTab('sync')" style="font-size:10px">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
         <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
@@ -825,7 +880,7 @@
 
 <script>
   // ── Navigation ──────────────────────────────────────────
-  const tabScreens = { emp: 's-emp-list', payslips: 's-payslip-list', sync: 's-sync' };
+  const tabScreens = { emp: 's-emp-list', payroll: 's-payroll-list', payslips: 's-payslip-list', sync: 's-sync' };
   let activeTab = 'emp';
 
   function show(screenId) {
@@ -1043,24 +1098,105 @@
 
   const EMP_MAP = { SM:'Sarah Mitchell', JO:'James Okafor', PN:'Priya Nair', TH:'Tom Harrington' };
 
+  // ── Year data ─────────────────────────────────────────────
+  // Simulated: current month in prototype = October 2026 (month index 9)
+  const CURRENT_YEAR = 2026;
+  const CURRENT_MONTH = 9; // 0-based, October
+
+  const SLIPS_BY_YEAR = {
+    2026: SLIPS, // already defined above
+    2025: [
+      // 2025 — full year of data (Tom Harrington left mid-year; shown as archived)
+      { emp:'PN', month:11, period:'Dec 1 – Dec 31',  schedule:'Monthly',        net:6500 },
+      { emp:'SM', month:11, period:'Dec 15 – Dec 31', schedule:'Bi-weekly 2/2',  net:2000 },
+      { emp:'SM', month:11, period:'Dec 1 – Dec 14',  schedule:'Bi-weekly 1/2',  net:2000 },
+      { emp:'TH', month:11, period:'Dec 15 – Dec 31', schedule:'Bi-weekly 2/2',  net:1600 },
+      { emp:'TH', month:11, period:'Dec 1 – Dec 14',  schedule:'Bi-weekly 1/2',  net:1600 },
+      { emp:'PN', month:10, period:'Nov 1 – Nov 30',  schedule:'Monthly',        net:6500 },
+      { emp:'SM', month:10, period:'Nov 15 – Nov 30', schedule:'Bi-weekly 2/2',  net:2000 },
+      { emp:'SM', month:10, period:'Nov 1 – Nov 14',  schedule:'Bi-weekly 1/2',  net:2000 },
+      { emp:'TH', month:10, period:'Nov 15 – Nov 30', schedule:'Bi-weekly 2/2',  net:1600 },
+      { emp:'TH', month:10, period:'Nov 1 – Nov 14',  schedule:'Bi-weekly 1/2',  net:1600 },
+      { emp:'PN', month:9,  period:'Oct 1 – Oct 31',  schedule:'Monthly',        net:6500 },
+      { emp:'SM', month:9,  period:'Oct 15 – Oct 31', schedule:'Bi-weekly 2/2',  net:2000 },
+      { emp:'SM', month:9,  period:'Oct 1 – Oct 14',  schedule:'Bi-weekly 1/2',  net:2000 },
+      { emp:'TH', month:9,  period:'Oct 15 – Oct 31', schedule:'Bi-weekly 2/2',  net:1600 },
+      { emp:'TH', month:9,  period:'Oct 1 – Oct 14',  schedule:'Bi-weekly 1/2',  net:960  }, // partial — resigned
+      { emp:'PN', month:8,  period:'Sep 1 – Sep 30',  schedule:'Monthly',        net:6500 },
+      { emp:'SM', month:8,  period:'Sep 15 – Sep 30', schedule:'Bi-weekly 2/2',  net:2000 },
+      { emp:'SM', month:8,  period:'Sep 1 – Sep 14',  schedule:'Bi-weekly 1/2',  net:2000 },
+      { emp:'PN', month:7,  period:'Aug 1 – Aug 31',  schedule:'Monthly',        net:6500 },
+      { emp:'SM', month:7,  period:'Aug 15 – Aug 31', schedule:'Bi-weekly 2/2',  net:2000 },
+      { emp:'SM', month:7,  period:'Aug 1 – Aug 14',  schedule:'Bi-weekly 1/2',  net:2000 },
+      { emp:'PN', month:6,  period:'Jul 1 – Jul 31',  schedule:'Monthly',        net:6500 },
+      { emp:'SM', month:6,  period:'Jul 15 – Jul 31', schedule:'Bi-weekly 2/2',  net:2000 },
+      { emp:'SM', month:6,  period:'Jul 1 – Jul 14',  schedule:'Bi-weekly 1/2',  net:2000 },
+      { emp:'PN', month:5,  period:'Jun 1 – Jun 30',  schedule:'Monthly',        net:6500 },
+      { emp:'SM', month:5,  period:'Jun 15 – Jun 30', schedule:'Bi-weekly 2/2',  net:2000 },
+      { emp:'SM', month:5,  period:'Jun 1 – Jun 14',  schedule:'Bi-weekly 1/2',  net:2000 },
+      { emp:'PN', month:4,  period:'May 1 – May 31',  schedule:'Monthly',        net:6500 },
+      { emp:'SM', month:4,  period:'May 15 – May 31', schedule:'Bi-weekly 2/2',  net:2000 },
+      { emp:'SM', month:4,  period:'May 1 – May 14',  schedule:'Bi-weekly 1/2',  net:2000 },
+      { emp:'PN', month:3,  period:'Apr 1 – Apr 30',  schedule:'Monthly',        net:6500 },
+      { emp:'SM', month:3,  period:'Apr 15 – Apr 30', schedule:'Bi-weekly 2/2',  net:2000 },
+      { emp:'SM', month:3,  period:'Apr 1 – Apr 14',  schedule:'Bi-weekly 1/2',  net:2000 },
+      { emp:'PN', month:2,  period:'Mar 1 – Mar 31',  schedule:'Monthly',        net:6500 },
+      { emp:'SM', month:2,  period:'Mar 15 – Mar 31', schedule:'Bi-weekly 2/2',  net:2000 },
+      { emp:'SM', month:2,  period:'Mar 1 – Mar 14',  schedule:'Bi-weekly 1/2',  net:2000 },
+      { emp:'PN', month:1,  period:'Feb 1 – Feb 28',  schedule:'Monthly',        net:6500 },
+      { emp:'SM', month:1,  period:'Feb 15 – Feb 28', schedule:'Bi-weekly 2/2',  net:2000 },
+      { emp:'SM', month:1,  period:'Feb 1 – Feb 14',  schedule:'Bi-weekly 1/2',  net:2000 },
+      { emp:'PN', month:0,  period:'Jan 1 – Jan 31',  schedule:'Monthly',        net:6500 },
+      { emp:'SM', month:0,  period:'Jan 15 – Jan 31', schedule:'Bi-weekly 2/2',  net:2000 },
+      { emp:'SM', month:0,  period:'Jan 1 – Jan 14',  schedule:'Bi-weekly 1/2',  net:2000 },
+    ]
+  };
+
+  const YEARS = [2026, 2025];
+  let activeYear   = 2026;
   let activeFilter = 'all';
 
   function fmt(n) {
     if (!n) return '—';
-    return '$' + n.toLocaleString('en-US');
+    return 'PHP ' + n.toLocaleString('en-US');
+  }
+
+  function renderYearTabs() {
+    const el = document.getElementById('ps-year-tabs');
+    el.innerHTML = YEARS.map(y => {
+      const sel = y === activeYear;
+      return '<button onclick="switchYear(' + y + ')" style="'
+        + 'padding:6px 16px 8px;font-size:14px;font-weight:700;background:none;border:none;'
+        + 'border-bottom:2px solid ' + (sel ? '#38bdf8' : 'transparent') + ';'
+        + 'color:' + (sel ? '#38bdf8' : '#475569') + ';cursor:pointer;margin-bottom:-1px;">'
+        + y + '</button>';
+    }).join('');
+  }
+
+  function switchYear(y) {
+    activeYear = y;
+    activeFilter = 'all';
+    renderYearTabs();
+    renderPayslips('all');
   }
 
   function renderPayslips(filter) {
     activeFilter = filter;
-    const slips = filter === 'all' ? SLIPS : SLIPS.filter(s => s.emp === filter);
+    const allYearSlips = SLIPS_BY_YEAR[activeYear] || [];
+    const slips = filter === 'all' ? allYearSlips : allYearSlips.filter(s => s.emp === filter);
 
-    // ── stats ──
-    const ytd   = slips.reduce((a,s) => a + s.net, 0);
-    const curMo  = slips.filter(s => s.month === 6).reduce((a,s) => a + s.net, 0);
-    const q = [0,1,2,3].map(q => slips.filter(s => Math.floor(s.month/3) === q).reduce((a,s) => a + s.net, 0));
+    // Current month cap: for current year show up to CURRENT_MONTH; past years show all 12
+    const maxMonth = activeYear === CURRENT_YEAR ? CURRENT_MONTH : 11;
 
-    document.getElementById('ps-stat-ytd').textContent   = fmt(ytd);
-    document.getElementById('ps-stat-month').textContent = fmt(curMo) || '—';
+    // ── stats (only months within cap) ──
+    const cappedSlips = slips.filter(s => s.month <= maxMonth);
+    const ytd    = cappedSlips.reduce((a,s) => a + s.net, 0);
+    const curMo  = cappedSlips.filter(s => s.month === maxMonth).reduce((a,s) => a + s.net, 0);
+    const q = [0,1,2,3].map(qi => cappedSlips.filter(s => Math.floor(s.month/3) === qi).reduce((a,s) => a + s.net, 0));
+
+    document.getElementById('ps-stat-ytd').textContent       = fmt(ytd);
+    document.getElementById('ps-stat-month-label').textContent = MONTHS[maxMonth];
+    document.getElementById('ps-stat-month').textContent     = fmt(curMo);
     document.getElementById('ps-q1').textContent = fmt(q[0]);
     document.getElementById('ps-q2').textContent = fmt(q[1]);
     document.getElementById('ps-q3').textContent = fmt(q[2]);
@@ -1069,23 +1205,23 @@
     // ── header label ──
     const emp = EMPLOYEES.find(e => e.key === filter);
     document.getElementById('ps-header-label').textContent =
-      filter === 'all' ? '2026 Pay Records' : (emp.full + ' · 2026');
+      filter === 'all' ? (activeYear + ' Pay Records') : (emp.full + ' · ' + activeYear);
 
-    // ── pills ──
+    // ── employee pills ──
     const pillsEl = document.getElementById('ps-pills');
     pillsEl.innerHTML = EMPLOYEES.map(e => {
       const active = e.key === filter;
       return '<button onclick="renderPayslips(\'' + e.key + '\')" style="background:' + (active ? '#1e293b' : '#0f172a') + ';border:1px solid ' + (active ? '#334155' : '#1e293b') + ';border-radius:20px;padding:5px 12px;font-size:12px;color:' + (active ? '#94a3b8' : '#475569') + ';cursor:pointer;">' + e.label + '</button>';
     }).join('');
 
-    // ── list (months 6→0, recent first) ──
+    // ── list (maxMonth → 0, recent first) ──
     const listEl = document.getElementById('ps-list');
     let html = '';
-    for (let m = 9; m >= 0; m--) {
+    for (let m = maxMonth; m >= 0; m--) {
       const monthSlips = slips.filter(s => s.month === m);
       const monthTotal = monthSlips.reduce((a,s) => a + s.net, 0);
       html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
-            + '<p class="section-label" style="margin:0;">' + MONTHS[m] + ' 2026</p>'
+            + '<p class="section-label" style="margin:0;">' + MONTHS[m] + ' ' + activeYear + '</p>'
             + '<span style="font-size:11px;color:#334155;">' + (monthTotal ? fmt(monthTotal) + ' paid' : '—') + '</span>'
             + '</div>';
       if (monthSlips.length === 0) {
@@ -1111,6 +1247,7 @@
   }
 
   // initialise payslip tab on first load
+  renderYearTabs();
   renderPayslips('all');
 </script>
 

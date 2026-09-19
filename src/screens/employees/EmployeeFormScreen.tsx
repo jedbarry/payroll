@@ -16,10 +16,11 @@ import { useEmployeeStore } from '../../store/employeeStore';
 import { useDepartmentStore } from '../../store/departmentStore';
 import { getEmployeeById } from '../../db/queries/employees';
 import { PaySchedule, PayDayConfig } from '../../domain/types';
+import { DatePickerField } from '../../components/DatePickerField';
 
 export function EmployeeFormScreen({ route, navigation }: any) {
   const { theme } = useTheme();
-  const { addEmployee, updateEmployee, archiveEmployee } = useEmployeeStore();
+  const { addEmployee, updateEmployee } = useEmployeeStore();
   const { departments, loadDepartments, ensureDepartment } = useDepartmentStore();
 
   const mode: 'add' | 'edit' = route.params?.mode || 'add';
@@ -31,6 +32,8 @@ export function EmployeeFormScreen({ route, navigation }: any) {
   const [payDayConfig, setPayDayConfig] = useState<PayDayConfig | null>('last');
   const [departmentText, setDepartmentText] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [startDate, setStartDate] = useState('');
+  const [archiveDate, setArchiveDate] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -42,13 +45,15 @@ export function EmployeeFormScreen({ route, navigation }: any) {
     if (mode === 'edit' && employeeId) {
       getEmployeeById(employeeId).then((emp) => {
         if (emp) {
-          setName(emp.name);
-          setMonthlyRate(emp.monthly_rate.toString());
-          setSchedule(emp.pay_schedule);
-          setPayDayConfig(emp.pay_day_config);
-          setIsActive(emp.is_active);
-          navigation.setOptions({ title: `Edit ${emp.name}` });
-        }
+            setName(emp.name);
+            setMonthlyRate(emp.monthly_rate.toString());
+            setSchedule(emp.pay_schedule);
+            setPayDayConfig(emp.pay_day_config);
+            setStartDate(emp.start_date ?? '');
+            setArchiveDate(emp.archive_date ?? '');
+            setIsActive(emp.is_active);
+            navigation.setOptions({ title: `Edit ${emp.name}` });
+          }
       });
     } else {
       navigation.setOptions({ title: 'New Employee' });
@@ -116,6 +121,9 @@ export function EmployeeFormScreen({ route, navigation }: any) {
         department_id = dept.id;
       }
 
+      const trimmedStart = startDate.trim() || null;
+      const trimmedArchive = archiveDate.trim() || null;
+
       if (mode === 'add') {
         await addEmployee({
           name: trimmedName,
@@ -123,6 +131,8 @@ export function EmployeeFormScreen({ route, navigation }: any) {
           pay_schedule: schedule,
           pay_day_config: schedule === 'weekly' ? null : payDayConfig,
           department_id,
+          start_date: trimmedStart,
+          archive_date: trimmedArchive,
         });
       } else if (mode === 'edit' && employeeId) {
         await updateEmployee(employeeId, {
@@ -132,6 +142,8 @@ export function EmployeeFormScreen({ route, navigation }: any) {
           pay_day_config: schedule === 'weekly' ? null : payDayConfig,
           department_id,
           is_active: isActive,
+          start_date: trimmedStart,
+          archive_date: trimmedArchive,
         });
       }
       navigation.goBack();
@@ -139,6 +151,14 @@ export function EmployeeFormScreen({ route, navigation }: any) {
       Alert.alert('Error', err.message || 'Failed to save employee.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  // When archive date is set manually, also mark inactive
+  const handleArchiveDateChange = (date: string | null) => {
+    setArchiveDate(date ?? '');
+    if (date) {
+      setIsActive(false);
     }
   };
 
@@ -154,7 +174,14 @@ export function EmployeeFormScreen({ route, navigation }: any) {
           style: 'destructive',
           onPress: async () => {
             try {
-              await archiveEmployee(employeeId);
+              // Auto-fill archive date with today if not already set
+              const today = new Date();
+              const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+              const finalArchiveDate = archiveDate || todayStr;
+              await updateEmployee(employeeId, {
+                is_active: false,
+                archive_date: finalArchiveDate,
+              });
               navigation.goBack();
             } catch (err: any) {
               Alert.alert('Error', err.message || 'Failed to archive employee.');
@@ -189,7 +216,7 @@ export function EmployeeFormScreen({ route, navigation }: any) {
 
         {/* Monthly Rate */}
         <View style={styles.fieldGroup}>
-          <Text style={[styles.label, { color: theme.textMuted }]}>Monthly Rate ($)</Text>
+          <Text style={[styles.label, { color: theme.textMuted }]}>Monthly Rate (PHP)</Text>
           <TextInput
             style={[styles.input, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]}
             placeholder="e.g. 5000"
@@ -295,6 +322,23 @@ export function EmployeeFormScreen({ route, navigation }: any) {
           </View>
         )}
 
+        <DatePickerField
+          label="Start Date"
+          value={startDate}
+          onChange={(d) => setStartDate(d ?? '')}
+          placeholder="Not set"
+          clearable
+        />
+
+        <DatePickerField
+          label="Archive Date"
+          hint="optional — auto-set on archive"
+          value={archiveDate}
+          onChange={handleArchiveDateChange}
+          placeholder="Not set"
+          clearable
+        />
+
         {/* Save */}
         <TouchableOpacity
           style={[styles.primaryButton, { backgroundColor: theme.accent }]}
@@ -308,24 +352,15 @@ export function EmployeeFormScreen({ route, navigation }: any) {
         </TouchableOpacity>
 
         {/* Edit-mode actions */}
-        {mode === 'edit' && employeeId && (
+        {mode === 'edit' && employeeId && isActive && (
           <View style={styles.editActions}>
             <TouchableOpacity
-              style={[styles.secondaryButton, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}
-              onPress={() => navigation.navigate('PayrollRunList', { employeeId, employeeName: name })}
+              style={[styles.archiveButton, { borderColor: theme.deduction }]}
+              onPress={handleArchive}
               activeOpacity={0.7}
             >
-              <Text style={[styles.secondaryButtonText, { color: theme.accent }]}>Run History &amp; New Run</Text>
+              <Text style={[styles.archiveButtonText, { color: theme.deduction }]}>Archive Employee</Text>
             </TouchableOpacity>
-            {isActive && (
-              <TouchableOpacity
-                style={[styles.archiveButton, { borderColor: theme.deduction }]}
-                onPress={handleArchive}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.archiveButtonText, { color: theme.deduction }]}>Archive Employee</Text>
-              </TouchableOpacity>
-            )}
           </View>
         )}
       </ScrollView>
@@ -352,8 +387,6 @@ const styles = StyleSheet.create({
   primaryButton: { height: 50, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginTop: 10 },
   primaryButtonText: { fontSize: 16, fontWeight: '700' },
   editActions: { marginTop: 24, gap: 12 },
-  secondaryButton: { height: 50, borderRadius: 10, borderWidth: 1, justifyContent: 'center', alignItems: 'center' },
-  secondaryButtonText: { fontSize: 15, fontWeight: '600' },
   archiveButton: { height: 50, borderRadius: 10, borderWidth: 1, justifyContent: 'center', alignItems: 'center' },
   archiveButtonText: { fontSize: 15, fontWeight: '600' },
 });

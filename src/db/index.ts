@@ -1,5 +1,10 @@
 import * as SQLite from 'expo-sqlite';
-import { ALL_SCHEMAS, MIGRATE_EMPLOYEES_ADD_DEPARTMENT } from './schema';
+import {
+  ALL_SCHEMAS,
+  MIGRATE_EMPLOYEES_ADD_DEPARTMENT,
+  MIGRATE_EMPLOYEES_ADD_START_DATE,
+  MIGRATE_EMPLOYEES_ADD_ARCHIVE_DATE,
+} from './schema';
 
 let dbInstance: SQLite.SQLiteDatabase | null = null;
 
@@ -15,11 +20,17 @@ export async function initDb(): Promise<SQLite.SQLiteDatabase> {
     await db.execAsync(schema);
   }
 
-  // Migration: add department_id to employees for existing databases
-  try {
-    await db.execAsync(MIGRATE_EMPLOYEES_ADD_DEPARTMENT);
-  } catch {
-    // Column already exists — safe to ignore
+  // Migrations: add columns to employees for existing databases
+  for (const migration of [
+    MIGRATE_EMPLOYEES_ADD_DEPARTMENT,
+    MIGRATE_EMPLOYEES_ADD_START_DATE,
+    MIGRATE_EMPLOYEES_ADD_ARCHIVE_DATE,
+  ]) {
+    try {
+      await db.execAsync(migration);
+    } catch {
+      // Column already exists — safe to ignore
+    }
   }
 
   dbInstance = db;

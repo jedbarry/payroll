@@ -14,6 +14,8 @@ export interface Employee {
   pay_day_config: PayDayConfig | null;
   department_id: string | null;
   is_active: boolean;
+  start_date: string | null;
+  archive_date: string | null;
   created_at: string;
 }
 

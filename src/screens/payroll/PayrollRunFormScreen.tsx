@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -23,10 +23,18 @@ import { calculatePayroll } from '../../domain/calculatePayroll';
 import { LineItemRow } from '../../components/LineItemRow';
 
 function formatCurrency(amount: number): string {
-  return `$${amount.toLocaleString('en-US', {
+  return `PHP ${amount.toLocaleString('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
+}
+
+function formatPeriod(start: string, end: string): string {
+  const fmt = (iso: string) => {
+    const d = new Date(iso + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+  return `${fmt(start)} – ${fmt(end)}`;
 }
 
 export function PayrollRunFormScreen({ route, navigation }: any) {
@@ -34,9 +42,21 @@ export function PayrollRunFormScreen({ route, navigation }: any) {
   const { employeeId: paramEmployeeId, runId: paramRunId } = route.params || {};
   const { saveDraft, commitRun, deleteDraft } = usePayrollStore();
 
+  type AvailablePeriod = {
+    start: string;
+    end: string;
+    month: number;
+    year: number;
+    used: boolean;
+  };
+
+  const periodScrollRef = useRef<ScrollView>(null);
+  const chipOffsetsRef = useRef<Record<string, number>>({});
+
   const [loading, setLoading] = useState(true);
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [currentRun, setCurrentRun] = useState<PayrollRun | null>(null);
+  const [availablePeriods, setAvailablePeriods] = useState<AvailablePeriod[]>([]);
 
   const [periodStart, setPeriodStart] = useState('');
   const [periodEnd, setPeriodEnd] = useState('');
@@ -80,6 +100,7 @@ export function PayrollRunFormScreen({ route, navigation }: any) {
           navigation.setOptions({
             title: run.status === 'committed' ? 'Committed Run' : 'Draft Run',
           });
+
         } else if (paramEmployeeId) {
           // New run
           const emp = await getEmployeeById(paramEmployeeId);
@@ -92,48 +113,68 @@ export function PayrollRunFormScreen({ route, navigation }: any) {
           setEmployee(emp);
           navigation.setOptions({ title: `New Run: ${emp.name}` });
 
-          // Find existing runs for this employee to pick next available pay period
+          // Build full list of available periods for this year, tagged with used status
           const existingRuns = await getPayrollRunsByEmployee(paramEmployeeId);
           const existingPeriodKeys = new Set(
             existingRuns.map((r) => `${r.period_start}_${r.period_end}`),
           );
 
-          // Check current year & current month, or past months
           const now = new Date();
-          const year = now.getFullYear();
-          let selectedPeriod: { start: string; end: string } | null = null;
-          let calculatedBase = 0;
+          const currentYear = now.getFullYear();
 
-          // Search from current month backward or forward across year to find first non-existing period
-          // Standard: look through months 0 to 11 of this year
-          for (let m = 0; m < 12; m++) {
-            const periods = getPayPeriods(emp.pay_schedule, emp.pay_day_config, m, year);
-            for (const p of periods) {
-              const key = `${p.start}_${p.end}`;
-              if (!existingPeriodKeys.has(key)) {
-                selectedPeriod = p;
-                calculatedBase = getBaseAmount(emp.monthly_rate, emp.pay_schedule, m, year);
-                break;
+          // Determine year range: from employee start_date year (or current year) up to current year
+          const startYear = emp.start_date
+            ? parseInt(emp.start_date.substring(0, 4), 10)
+            : currentYear;
+          const endYear = currentYear;
+
+          const all: AvailablePeriod[] = [];
+
+          for (let yr = startYear; yr <= endYear; yr++) {
+            for (let m = 0; m < 12; m++) {
+              const periods = getPayPeriods(emp.pay_schedule, emp.pay_day_config, m, yr);
+              for (const p of periods) {
+                // Filter by start_date: period end must be >= employee start_date
+                if (emp.start_date && p.end < emp.start_date) continue;
+                // Filter by archive_date: period start must be <= employee archive_date
+                if (emp.archive_date && p.start > emp.archive_date) continue;
+                all.push({
+                  ...p,
+                  month: m,
+                  year: yr,
+                  used: existingPeriodKeys.has(`${p.start}_${p.end}`),
+                });
               }
             }
-            if (selectedPeriod) break;
           }
 
-          // Fallback if all 12 months used
-          if (!selectedPeriod) {
-            const m = now.getMonth();
-            const periods = getPayPeriods(emp.pay_schedule, emp.pay_day_config, m, year);
-            selectedPeriod = periods[0] || {
-              start: `${year}-01-01`,
-              end: `${year}-01-31`,
-            };
-            calculatedBase = getBaseAmount(emp.monthly_rate, emp.pay_schedule, m, year);
-          }
+          // Default selection priority:
+          // 1. A period that contains today (mid-week, weekday)
+          // 2. The next upcoming unused period (today is a weekend / between periods)
+          // 3. The most recent past unused period
+          // 4. Any unused period
+          // 5. null (all used)
+          const todayStr = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`;
+          const currentPeriod =
+            // 1. Contains today
+            all.find((p) => !p.used && p.start <= todayStr && p.end >= todayStr) ??
+            // 2. Next upcoming (start is in the future — weekend gap or between periods)
+            all.find((p) => !p.used && p.start > todayStr) ??
+            // 3. Most recent past — find last unused with end < today
+            [...all].reverse().find((p) => !p.used && p.end < todayStr) ??
+            // 4. Any unused
+            all.find((p) => !p.used) ??
+            null;
 
           if (isMounted) {
-            setPeriodStart(selectedPeriod.start);
-            setPeriodEnd(selectedPeriod.end);
-            setBaseAmount(calculatedBase);
+            setAvailablePeriods(all);
+            if (currentPeriod) {
+              setPeriodStart(currentPeriod.start);
+              setPeriodEnd(currentPeriod.end);
+              setBaseAmount(
+                getBaseAmount(emp.monthly_rate, emp.pay_schedule, currentPeriod.month, currentPeriod.year),
+              );
+            }
             setLineItems([]);
           }
         }
@@ -151,6 +192,18 @@ export function PayrollRunFormScreen({ route, navigation }: any) {
   }, [paramRunId, paramEmployeeId, navigation]);
 
   const isCommitted = currentRun?.status === 'committed';
+
+  const handleSelectPeriod = useCallback(
+    (p: { start: string; end: string; month: number; year: number; used: boolean }) => {
+      if (p.used || !employee) return;
+      setPeriodStart(p.start);
+      setPeriodEnd(p.end);
+      setBaseAmount(
+        getBaseAmount(employee.monthly_rate, employee.pay_schedule, p.month, p.year),
+      );
+    },
+    [employee],
+  );
 
   const payrollCalc = useMemo(() => {
     return calculatePayroll(baseAmount, lineItems);
@@ -186,8 +239,16 @@ export function PayrollRunFormScreen({ route, navigation }: any) {
     setLineItems((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const isSelectedPeriodUsed = availablePeriods.some(
+    (p) => p.used && p.start === periodStart && p.end === periodEnd,
+  );
+
   const handleSaveDraft = async () => {
     if (!employee) return;
+    if (isSelectedPeriodUsed) {
+      Alert.alert('Duplicate Period', 'A payroll run already exists for this period.');
+      return;
+    }
     setActionLoading(true);
     try {
       await saveDraft(
@@ -213,6 +274,10 @@ export function PayrollRunFormScreen({ route, navigation }: any) {
 
   const handleCommit = () => {
     if (!employee) return;
+    if (isSelectedPeriodUsed) {
+      Alert.alert('Duplicate Period', 'A payroll run already exists for this period.');
+      return;
+    }
     Alert.alert(
       'Commit Payroll Run',
       `Commit payroll for ${employee.name} (${formatCurrency(payrollCalc.netPay)})? This will generate a permanent payslip.`,
@@ -305,7 +370,7 @@ export function PayrollRunFormScreen({ route, navigation }: any) {
       style={[styles.container, { backgroundColor: theme.bg }]}
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Read-only Period & Employee tile */}
+        {/* Employee / Period tile */}
         <View
           style={[
             styles.infoCard,
@@ -316,12 +381,82 @@ export function PayrollRunFormScreen({ route, navigation }: any) {
             <Text style={[styles.infoLabel, { color: theme.textMuted }]}>Employee</Text>
             <Text style={[styles.infoValue, { color: theme.text }]}>{employee?.name}</Text>
           </View>
-          <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, { color: theme.textMuted }]}>Pay Period</Text>
-            <Text style={[styles.infoValue, { color: theme.text }]}>
-              {periodStart} – {periodEnd}
-            </Text>
-          </View>
+
+          {/* Pay Period — plain text for existing runs (draft or committed), picker for new only */}
+          {currentRun ? (
+            <View style={styles.infoRow}>
+              <Text style={[styles.infoLabel, { color: theme.textMuted }]}>Pay Period</Text>
+              <Text style={[styles.infoValue, { color: theme.text }]}>
+                {formatPeriod(periodStart, periodEnd)}
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.periodPickerSection}>
+              <Text style={[styles.infoLabel, { color: theme.textMuted, marginBottom: 8 }]}>
+                Pay Period
+              </Text>
+              <ScrollView
+                ref={periodScrollRef}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.periodChipsRow}
+              >
+                {availablePeriods.map((p) => {
+                  const isSelected = p.start === periodStart && p.end === periodEnd;
+                  const chipKey = `${p.start}_${p.end}`;
+                  return (
+                    <TouchableOpacity
+                      key={chipKey}
+                      onLayout={(e) => {
+                        chipOffsetsRef.current[chipKey] = e.nativeEvent.layout.x;
+                        // Once the selected chip lays out, scroll to it
+                        if (isSelected && e.nativeEvent.layout.x > 0) {
+                          periodScrollRef.current?.scrollTo({
+                            x: Math.max(0, e.nativeEvent.layout.x - 16),
+                            animated: false,
+                          });
+                        }
+                      }}
+                      style={[
+                        styles.periodChip,
+                        {
+                          backgroundColor: isSelected ? theme.accent : theme.surfaceAlt,
+                          borderColor: isSelected ? theme.accent : theme.border,
+                          opacity: p.used && !isSelected ? 0.4 : 1,
+                        },
+                      ]}
+                      onPress={() => handleSelectPeriod(p)}
+                      disabled={p.used}
+                      activeOpacity={0.7}
+                    >
+                      <Text
+                        style={[
+                          styles.periodChipDate,
+                          { color: isSelected ? theme.accentText : theme.text },
+                        ]}
+                      >
+                        {p.start}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.periodChipSep,
+                          { color: isSelected ? theme.accentText : theme.textMuted },
+                        ]}
+                      >
+                        → {p.end}
+                      </Text>
+                      {p.used && (
+                        <Text style={[styles.periodChipUsed, { color: theme.textFaint }]}>
+                          used
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
+
           <View style={styles.infoRow}>
             <Text style={[styles.infoLabel, { color: theme.textMuted }]}>Base Pay</Text>
             <Text style={[styles.infoValue, { color: theme.text }]}>
@@ -727,5 +862,34 @@ const styles = StyleSheet.create({
   deleteDraftButtonText: {
     fontSize: 15,
     fontWeight: '600',
+  },
+  periodPickerSection: {
+    paddingTop: 4,
+  },
+  periodChipsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingBottom: 4,
+  },
+  periodChip: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    alignItems: 'center',
+    minWidth: 100,
+  },
+  periodChipDate: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  periodChipSep: {
+    fontSize: 11,
+    marginTop: 1,
+  },
+  periodChipUsed: {
+    fontSize: 10,
+    marginTop: 2,
+    fontStyle: 'italic',
   },
 });

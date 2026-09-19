@@ -5,6 +5,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1129.0",
     "@expo/vector-icons": "^15.1.1",
+    "@react-native-community/datetimepicker": "9.1.0",
     "@react-navigation/bottom-tabs": "^7.18.18",
     "@react-navigation/native": "^7.3.18",
     "@react-navigation/native-stack": "^7.18.10",

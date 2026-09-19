@@ -13,10 +13,18 @@ import { PayrollRun } from '../../domain/types';
 import { getDb } from '../../db/index';
 
 function formatCurrency(amount: number): string {
-  return `$${amount.toLocaleString('en-US', {
+  return `PHP ${amount.toLocaleString('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
+}
+
+function formatPeriod(start: string, end: string): string {
+  const fmt = (iso: string) => {
+    const d = new Date(iso + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+  return `${fmt(start)} – ${fmt(end)}`;
 }
 
 export function PayrollRunListScreen({ route, navigation }: any) {
@@ -26,7 +34,7 @@ export function PayrollRunListScreen({ route, navigation }: any) {
 
   useEffect(() => {
     navigation.setOptions({
-      title: employeeName ? `${employeeName}'s Runs` : 'Payroll Runs',
+      title: employeeName ? `${employeeName}'s Payroll` : 'Payroll',
     });
   }, [navigation, employeeName]);
 
@@ -102,7 +110,7 @@ export function PayrollRunListScreen({ route, navigation }: any) {
                   >
                     <View style={styles.runCardHeader}>
                       <Text style={[styles.periodText, { color: theme.text }]}>
-                        {draftRun.period_start} – {draftRun.period_end}
+                        {formatPeriod(draftRun.period_start, draftRun.period_end)}
                       </Text>
                       <View
                         style={[
@@ -138,7 +146,7 @@ export function PayrollRunListScreen({ route, navigation }: any) {
                   activeOpacity={0.8}
                 >
                   <Text style={[styles.addRunButtonText, { color: theme.accentText }]}>
-                    + New Payroll Run
+                    + New Payroll
                   </Text>
                 </TouchableOpacity>
               )}
@@ -164,7 +172,7 @@ export function PayrollRunListScreen({ route, navigation }: any) {
             >
               <View style={styles.runCardHeader}>
                 <Text style={[styles.periodText, { color: theme.text }]}>
-                  {item.period_start} – {item.period_end}
+                  {formatPeriod(item.period_start, item.period_end)}
                 </Text>
                 <View
                   style={[

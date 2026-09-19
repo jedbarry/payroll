@@ -10,6 +10,8 @@ interface EmployeeRow {
   pay_day_config: string | null;
   department_id: string | null;
   is_active: number;
+  start_date: string | null;
+  archive_date: string | null;
   created_at: string;
 }
 
@@ -22,6 +24,8 @@ function mapEmployeeRow(row: EmployeeRow): Employee {
     pay_day_config: row.pay_day_config as PayDayConfig | null,
     department_id: row.department_id ?? null,
     is_active: Boolean(row.is_active),
+    start_date: row.start_date ?? null,
+    archive_date: row.archive_date ?? null,
     created_at: row.created_at,
   };
 }
@@ -35,8 +39,8 @@ export async function insertEmployee(
   const is_active = employee.is_active ? 1 : 0;
 
   await db.runAsync(
-    `INSERT INTO employees (id, name, monthly_rate, pay_schedule, pay_day_config, department_id, is_active, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?);`,
+    `INSERT INTO employees (id, name, monthly_rate, pay_schedule, pay_day_config, department_id, is_active, start_date, archive_date, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
     [
       id,
       employee.name,
@@ -45,6 +49,8 @@ export async function insertEmployee(
       employee.pay_day_config ?? null,
       employee.department_id ?? null,
       is_active,
+      employee.start_date ?? null,
+      employee.archive_date ?? null,
       created_at,
     ],
   );
@@ -57,6 +63,8 @@ export async function insertEmployee(
     pay_day_config: employee.pay_day_config ?? null,
     department_id: employee.department_id ?? null,
     is_active: employee.is_active,
+    start_date: employee.start_date ?? null,
+    archive_date: employee.archive_date ?? null,
     created_at,
   };
 }
@@ -97,7 +105,7 @@ export async function updateEmployee(
 
   await db.runAsync(
     `UPDATE employees
-     SET name = ?, monthly_rate = ?, pay_schedule = ?, pay_day_config = ?, department_id = ?, is_active = ?
+     SET name = ?, monthly_rate = ?, pay_schedule = ?, pay_day_config = ?, department_id = ?, is_active = ?, start_date = ?, archive_date = ?
      WHERE id = ?;`,
     [
       updated.name,
@@ -106,6 +114,8 @@ export async function updateEmployee(
       updated.pay_day_config ?? null,
       updated.department_id ?? null,
       updated.is_active ? 1 : 0,
+      updated.start_date ?? null,
+      updated.archive_date ?? null,
       id,
     ],
   );

@@ -49,6 +49,16 @@ export async function getPayslipsByYear(year: number): Promise<Payslip[]> {
   return rows.map(mapPayslipRow);
 }
 
+export async function getPayslipYears(): Promise<number[]> {
+  const db = getDb();
+  const rows = await db.getAllAsync<{ year: number }>(
+    `SELECT DISTINCT CAST(substr(generated_at, 1, 4) AS INTEGER) AS year
+     FROM payslips
+     ORDER BY year DESC;`,
+  );
+  return rows.map((r) => r.year);
+}
+
 export async function getPayslipById(id: string): Promise<Payslip | null> {
   const db = getDb();
   const row = await db.getFirstAsync<PayslipRow>('SELECT * FROM payslips WHERE id = ?;', [id]);

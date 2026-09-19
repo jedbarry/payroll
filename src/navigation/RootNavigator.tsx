@@ -3,11 +3,13 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { EmployeesStack } from './EmployeesStack';
+import { PayrollStack } from './PayrollStack';
 import { PayslipsStack } from './PayslipsStack';
 import { SyncScreen } from '../screens/sync/SyncScreen';
 
 export type RootTabParamList = {
   EmployeesTab: undefined;
+  PayrollTab: undefined;
   PayslipsTab: undefined;
   SyncTab: undefined;
 };
@@ -36,6 +38,16 @@ export function RootNavigator() {
           tabBarLabel: 'Employees',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="PayrollTab"
+        component={PayrollStack}
+        options={{
+          tabBarLabel: 'Payroll',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="card" size={size} color={color} />
           ),
         }}
       />
