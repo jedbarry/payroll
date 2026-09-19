@@ -735,9 +735,10 @@
     ══════════════════════════════════════════════════════ -->
     <div class="screen" id="s-sync">
       <div class="nav-header">
-        <h2>S3 Sync</h2>
+        <h2>Sync</h2>
       </div>
       <div class="scroll-content">
+
         <div class="sync-status">
           <div class="sync-row">
             <div class="sync-dot"></div>
@@ -745,7 +746,23 @@
           </div>
         </div>
 
-        <p class="section-label">S3 Configuration</p>
+        <!-- Files section -->
+        <p class="section-label">Device Files</p>
+        <button class="btn-primary" style="margin-bottom:10px">
+          ↑ Export to Files
+        </button>
+        <button class="btn-secondary" style="margin-bottom:0;border-color:#334155;color:#94a3b8;">
+          ↓ Import from Files
+        </button>
+        <div style="margin-top:10px;margin-bottom:20px;background:#1e293b;border-radius:10px;padding:12px 14px">
+          <p style="font-size:12px;color:#475569;line-height:1.6">
+            Export saves a JSON snapshot to your device and opens the share sheet (Files app, AirDrop, etc.).
+            Import picks a snapshot from Files and <strong style="color:#fca5a5">overwrites all local data</strong>.
+          </p>
+        </div>
+
+        <!-- S3 section -->
+        <p class="section-label">S3 Backup</p>
         <div class="form-group">
           <label class="form-label">AWS Region</label>
           <input class="form-input" type="text" value="us-east-1" />
@@ -762,22 +779,19 @@
           <label class="form-label">Secret Access Key</label>
           <input class="form-input" type="password" value="••••••••••••••••••••" />
         </div>
-
-        <div class="divider"></div>
-
-        <button class="btn-primary" style="margin-bottom:10px">
+        <button class="btn-primary" style="margin-bottom:10px;margin-top:8px">
           ↑ Export to S3
         </button>
         <button class="btn-secondary" style="border-color:#7f1d1d;color:#fca5a5;">
           ↓ Import from S3 (overwrites local data)
         </button>
-
-        <div style="margin-top:20px;background:#1e293b;border-radius:10px;padding:14px 16px">
+        <div style="margin-top:10px;background:#1e293b;border-radius:10px;padding:12px 14px">
           <p style="font-size:12px;color:#475569;line-height:1.6">
-            Export saves a full JSON snapshot of all employees, payroll runs, line items, and payslips to your S3 bucket.
-            Import <strong style="color:#fca5a5">overwrites all local data</strong> — use only to restore on a new device.
+            S3 Export saves to Files first, then uploads to your bucket.
+            S3 Import downloads from your bucket, saves to Files, then <strong style="color:#fca5a5">overwrites all local data</strong>.
           </p>
         </div>
+
       </div>
     </div>
 
