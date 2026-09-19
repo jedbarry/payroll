@@ -41,53 +41,53 @@ export function PayrollRunListScreen({ route, navigation }: any) {
     });
   }, [navigation, employeeName]);
 
+  // Reload on focus (returning from form etc.)
   useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      if (employeeId) loadRunsForEmployee(employeeId);
+    });
+    if (employeeId) loadRunsForEmployee(employeeId);
+    return unsubscribe;
+  }, [navigation, employeeId, loadRunsForEmployee]);
+
+  // Auto-generate a draft once on mount — only if the period has already started
+  useEffect(() => {
+    let cancelled = false;
+
     async function initRuns() {
       if (!employeeId) return;
-      await loadRunsForEmployee(employeeId);
 
-      // Auto-create a draft if none exists
       const existing = await getPayrollRunsByEmployee(employeeId);
-      const hasDraft = existing.some((r) => r.status === 'draft');
-      if (hasDraft) return;
+      if (existing.some((r) => r.status === 'draft')) return;
 
       const emp = await getEmployeeById(employeeId);
-      if (!emp) return;
-      if (!emp.is_active) return; // Don't auto-generate for archived employees
+      if (!emp || !emp.is_active) return;
 
-      const existingPeriodKeys = new Set(
-        existing.map((r) => `${r.period_start}_${r.period_end}`),
-      );
+      const existingPeriodKeys = new Set(existing.map((r) => `${r.period_start}_${r.period_end}`));
 
       const now = new Date();
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       const currentYear = now.getFullYear();
-      const startYear = emp.start_date
-        ? parseInt(emp.start_date.substring(0, 4), 10)
-        : currentYear;
+      const startYear = emp.start_date ? parseInt(emp.start_date.substring(0, 4), 10) : currentYear;
 
-      const all: Array<{ start: string; end: string; month: number; year: number }> = [];
-      for (let yr = startYear; yr <= currentYear; yr++) {
-        for (let m = 0; m < 12; m++) {
+      // Find the most recent period that has started (start <= today) and has no run yet
+      let period: { start: string; end: string; month: number; year: number } | null = null;
+      outer: for (let yr = currentYear; yr >= startYear; yr--) {
+        for (let m = 11; m >= 0; m--) {
           const periods = getPayPeriods(emp.pay_schedule, emp.pay_day_config, m, yr);
-          for (const p of periods) {
+          for (const p of [...periods].reverse()) {
             if (emp.start_date && p.end < emp.start_date) continue;
             if (emp.archive_date && p.start > emp.archive_date) continue;
             if (existingPeriodKeys.has(`${p.start}_${p.end}`)) continue;
-            all.push({ ...p, month: m, year: yr });
+            if (p.start <= todayStr) {
+              period = { ...p, month: m, year: yr };
+              break outer;
+            }
           }
         }
       }
 
-      if (all.length === 0) return;
-
-      const todayStr = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`;
-      const period =
-        all.find((p) => p.start <= todayStr && p.end >= todayStr) ??
-        all.find((p) => p.start > todayStr) ??
-        [...all].reverse().find((p) => p.end < todayStr) ??
-        all[0];
-
-      if (!period) return;
+      if (!period || cancelled) return;
 
       const base = getBaseAmount(emp.monthly_rate, emp.pay_schedule, period.month, period.year);
       await saveDraft(
@@ -104,12 +104,12 @@ export function PayrollRunListScreen({ route, navigation }: any) {
       );
     }
 
-    const unsubscribe = navigation.addListener('focus', initRuns);
     initRuns();
-    return unsubscribe;
-  }, [navigation, employeeId, loadRunsForEmployee]);
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [employeeId]);
 
-  const draftRun = runs.find((r) => r.status === 'draft');
+  const draftRuns = runs.filter((r) => r.status === 'draft');
   const committedRuns = runs.filter((r) => r.status === 'committed');
 
   const handleCommittedRunPress = async (run: PayrollRun) => {
@@ -120,9 +120,10 @@ export function PayrollRunListScreen({ route, navigation }: any) {
         [run.id],
       );
       if (payslipRow) {
-        navigation.navigate('PayslipsTab', {
-          screen: 'PayslipDetail',
-          params: { payslipId: payslipRow.id },
+        navigation.navigate('PayslipDetail', {
+          payslipId: payslipRow.id,
+          employeeId,
+          employeeName,
         });
       } else {
         navigation.navigate('PayrollRunForm', { runId: run.id });
@@ -145,73 +146,75 @@ export function PayrollRunListScreen({ route, navigation }: any) {
           contentContainerStyle={styles.listContent}
           ListHeaderComponent={
             <View>
-              {/* Draft run card */}
-              {draftRun && (
+              {/* Always-visible + New Payroll button */}
+              <TouchableOpacity
+                style={[styles.addRunButton, { backgroundColor: theme.accent }]}
+                onPress={() =>
+                  navigation.navigate('PayrollRunForm', {
+                    employeeId,
+                    mode: 'new',
+                  })
+                }
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.addRunButtonText, { color: theme.accentText }]}>
+                  + New Payroll
+                </Text>
+              </TouchableOpacity>
+
+              {/* All draft runs */}
+              {draftRuns.length > 0 && (
                 <View style={styles.draftSection}>
                   <Text style={[styles.sectionTitle, { color: theme.badgeDraftText }]}>
-                    Active Draft
+                    Active Drafts
                   </Text>
-                  <TouchableOpacity
-                    style={[
-                      styles.draftCard,
-                      {
-                        backgroundColor: theme.badgeDraftBg,
-                        borderColor: theme.badgeDraftText,
-                      },
-                    ]}
-                    onPress={() =>
-                      navigation.navigate('PayrollRunForm', {
-                        runId: draftRun.id,
-                        employeeId,
-                      })
-                    }
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.runCardHeader}>
-                      <Text style={[styles.periodText, { color: theme.text }]}>
-                        {formatPeriod(draftRun.period_start, draftRun.period_end)}
-                      </Text>
-                      <View
-                        style={[
-                          styles.badge,
-                          { backgroundColor: theme.surfaceAlt, borderColor: theme.badgeDraftText },
-                        ]}
-                      >
-                        <Text style={[styles.badgeText, { color: theme.badgeDraftText }]}>
-                          Draft
+                  {draftRuns.map((draft) => (
+                    <TouchableOpacity
+                      key={draft.id}
+                      style={[
+                        styles.draftCard,
+                        {
+                          backgroundColor: theme.badgeDraftBg,
+                          borderColor: theme.badgeDraftText,
+                          marginBottom: 10,
+                        },
+                      ]}
+                      onPress={() =>
+                        navigation.navigate('PayrollRunForm', {
+                          runId: draft.id,
+                          employeeId,
+                        })
+                      }
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.runCardHeader}>
+                        <Text style={[styles.periodText, { color: theme.text }]}>
+                          {formatPeriod(draft.period_start, draft.period_end)}
+                        </Text>
+                        <View
+                          style={[
+                            styles.badge,
+                            { backgroundColor: theme.surfaceAlt, borderColor: theme.badgeDraftText },
+                          ]}
+                        >
+                          <Text style={[styles.badgeText, { color: theme.badgeDraftText }]}>
+                            Draft
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={styles.runCardFooter}>
+                        <Text style={[styles.amountLabel, { color: theme.textMuted }]}>Net Pay</Text>
+                        <Text style={[styles.netAmount, { color: theme.accent }]}>
+                          {formatCurrency(draft.net_pay)}
                         </Text>
                       </View>
-                    </View>
-                    <View style={styles.runCardFooter}>
-                      <Text style={[styles.amountLabel, { color: theme.textMuted }]}>Net Pay</Text>
-                      <Text style={[styles.netAmount, { color: theme.accent }]}>
-                        {formatCurrency(draftRun.net_pay)}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
+                    </TouchableOpacity>
+                  ))}
                 </View>
               )}
 
-              {/* Action: + New button when no draft (always for archived, manual trigger for active) */}
-              {!draftRun && (
-                <TouchableOpacity
-                  style={[styles.addRunButton, { backgroundColor: theme.accent }]}
-                  onPress={() =>
-                    navigation.navigate('PayrollRunForm', {
-                      employeeId,
-                      mode: 'new',
-                    })
-                  }
-                  activeOpacity={0.8}
-                >
-                  <Text style={[styles.addRunButtonText, { color: theme.accentText }]}>
-                    + New Payroll
-                  </Text>
-                </TouchableOpacity>
-              )}
-
               {committedRuns.length > 0 && (
-                <Text style={[styles.sectionTitle, { color: theme.textMuted, marginTop: 16 }]}>
+                <Text style={[styles.sectionTitle, { color: theme.textMuted, marginTop: 8 }]}>
                   Committed Runs
                 </Text>
               )}
@@ -256,10 +259,10 @@ export function PayrollRunListScreen({ route, navigation }: any) {
             </TouchableOpacity>
           )}
           ListEmptyComponent={
-            !draftRun ? (
+            draftRuns.length === 0 ? (
               <View style={styles.emptyContainer}>
                 <Text style={[styles.emptyText, { color: theme.textFaint }]}>
-                  No payroll runs yet.
+                  No committed runs yet.
                 </Text>
               </View>
             ) : null

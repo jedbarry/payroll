@@ -6,7 +6,9 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  TouchableOpacity,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/ThemeContext';
 import { getPayslipById } from '../../db/queries/payslips';
 import { getPayrollRunById } from '../../db/queries/payrollRuns';
@@ -14,12 +16,21 @@ import { getEmployeeById } from '../../db/queries/employees';
 import { getLineItemsByRun } from '../../db/queries/lineItems';
 import { countWorkWeeksInMonth } from '../../domain/payPeriod';
 import { PayslipView } from '../../domain/types';
+import { usePayslipStore } from '../../store/payslipStore';
 
 function formatCurrency(amount: number): string {
-  return `$${amount.toLocaleString('en-US', {
+  return `PHP ${amount.toLocaleString('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
+}
+
+function formatPeriod(start: string, end: string): string {
+  const fmt = (iso: string) => {
+    const d = new Date(iso + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+  return `${fmt(start)} – ${fmt(end)}`;
 }
 
 export function PayslipDetailScreen({ route, navigation }: any) {
@@ -28,9 +39,65 @@ export function PayslipDetailScreen({ route, navigation }: any) {
 
   const [payslip, setPayslip] = useState<PayslipView | null>(null);
   const [loading, setLoading] = useState(true);
+  const { deletePayslipAndRevertRun } = usePayslipStore();
+
+  const handleDelete = () => {
+    Alert.alert(
+      'Delete Payslip',
+      'This will delete the payslip and revert the payroll run to draft so you can edit and regenerate it.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            if (!payslip) return;
+            try {
+              await deletePayslipAndRevertRun(payslip.id, payslip.payroll_run_id);
+              const employeeId = route.params?.employeeId;
+              const employeeName = route.params?.employeeName;
+              navigation.reset({
+                index: 1,
+                routes: [
+                  { name: 'PayrollEmployeeList' },
+                  { name: 'PayrollRunList', params: { employeeId, employeeName } },
+                ],
+              });
+            } catch (err: any) {
+              Alert.alert('Error', err.message || 'Failed to delete payslip');
+            }
+          },
+        },
+      ],
+    );
+  };
 
   useEffect(() => {
-    navigation.setOptions({ title: 'Payslip' });
+    const employeeId = route.params?.employeeId;
+    const employeeName = route.params?.employeeName;
+    navigation.setOptions({
+      title: 'Payslip',
+      headerLeft: () => (
+        <TouchableOpacity
+          onPress={() => {
+            if (employeeId) {
+              navigation.reset({
+                index: 1,
+                routes: [
+                  { name: 'PayrollEmployeeList' },
+                  { name: 'PayrollRunList', params: { employeeId, employeeName } },
+                ],
+              });
+            } else {
+              navigation.goBack();
+            }
+          }}
+          style={{ marginRight: 8 }}
+        >
+          <Ionicons name="chevron-back" size={24} color={theme.accent} />
+        </TouchableOpacity>
+      ),
+    });
 
     let isMounted = true;
     async function loadData() {
@@ -106,10 +173,9 @@ export function PayslipDetailScreen({ route, navigation }: any) {
     <ScrollView style={[styles.container, { backgroundColor: theme.bg }]} contentContainerStyle={styles.content}>
       {/* Header Card */}
       <View style={[styles.headerCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-        <Text style={[styles.companyName, { color: theme.textMuted }]}>My Business</Text>
         <Text style={[styles.employeeName, { color: theme.text }]}>{employee.name}</Text>
         <Text style={[styles.periodText, { color: theme.textMuted }]}>
-          {run.period_start} – {run.period_end}
+          {formatPeriod(run.period_start, run.period_end)}
         </Text>
 
         <View style={styles.netPayBox}>
@@ -234,6 +300,17 @@ export function PayslipDetailScreen({ route, navigation }: any) {
           </Text>
         </View>
       </View>
+
+      {/* Delete & Regenerate */}
+      <TouchableOpacity
+        style={[styles.deleteButton, { borderColor: theme.deduction }]}
+        onPress={handleDelete}
+        activeOpacity={0.7}
+      >
+        <Text style={[styles.deleteButtonText, { color: theme.deduction }]}>
+          Delete &amp; Regenerate
+        </Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -258,17 +335,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
-  companyName: {
-    fontSize: 14,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 6,
-  },
   employeeName: {
     fontSize: 22,
-    fontWeight: '700',
+    fontWeight: '800',
     marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   periodText: {
     fontSize: 14,
@@ -352,6 +424,20 @@ const styles = StyleSheet.create({
   summaryTotalValue: {
     fontSize: 18,
     fontWeight: '800',
+  },
+  deleteButton: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 32,
+    height: 48,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  deleteButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
   },
   footer: {
     flexDirection: 'row',

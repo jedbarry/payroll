@@ -55,7 +55,7 @@ export function RootNavigator() {
         name="PayslipsTab"
         component={PayslipsStack}
         options={{
-          tabBarLabel: 'Payslips',
+          tabBarLabel: 'Pay Records',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="document-text" size={size} color={color} />
           ),

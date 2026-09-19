@@ -129,7 +129,7 @@ export function PayslipListScreen({ navigation }: any) {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Title */}
         <View style={styles.header}>
-          <Text style={[styles.title, { color: theme.text }]}>Payslips</Text>
+          <Text style={[styles.title, { color: theme.text }]}>Pay Records</Text>
         </View>
 
         {/* Year selector */}

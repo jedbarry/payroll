@@ -4,11 +4,13 @@ import { useTheme } from '../theme/ThemeContext';
 import { PayrollEmployeeListScreen } from '../screens/payroll/PayrollEmployeeListScreen';
 import { PayrollRunListScreen } from '../screens/payroll/PayrollRunListScreen';
 import { PayrollRunFormScreen } from '../screens/payroll/PayrollRunFormScreen';
+import { PayslipDetailScreen } from '../screens/payslips/PayslipDetailScreen';
 
 export type PayrollStackParamList = {
   PayrollEmployeeList: undefined;
   PayrollRunList: { employeeId: string; employeeName: string };
   PayrollRunForm: { employeeId?: string; runId?: string; mode?: 'new' };
+  PayslipDetail: { payslipId: string; employeeId?: string; employeeName?: string };
 };
 
 const Stack = createNativeStackNavigator<PayrollStackParamList>();
@@ -43,6 +45,11 @@ export function PayrollStack() {
         name="PayrollRunForm"
         component={PayrollRunFormScreen}
         options={{ title: 'Payroll' }}
+      />
+      <Stack.Screen
+        name="PayslipDetail"
+        component={PayslipDetailScreen}
+        options={{ title: 'Payslip' }}
       />
     </Stack.Navigator>
   );

@@ -315,10 +315,10 @@ export function PayrollRunFormScreen({ route, navigation }: any) {
               );
 
               if (payslipRow) {
-                // Navigate to PayslipsTab -> PayslipDetail
-                navigation.navigate('PayslipsTab', {
-                  screen: 'PayslipDetail',
-                  params: { payslipId: payslipRow.id },
+                navigation.navigate('PayslipDetail', {
+                  payslipId: payslipRow.id,
+                  employeeId: employee.id,
+                  employeeName: employee.name,
                 });
               } else {
                 navigation.goBack();

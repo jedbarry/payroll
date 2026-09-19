@@ -64,3 +64,8 @@ export async function getPayslipById(id: string): Promise<Payslip | null> {
   const row = await db.getFirstAsync<PayslipRow>('SELECT * FROM payslips WHERE id = ?;', [id]);
   return row ? mapPayslipRow(row) : null;
 }
+
+export async function deletePayslip(id: string): Promise<void> {
+  const db = getDb();
+  await db.runAsync('DELETE FROM payslips WHERE id = ?;', [id]);
+}

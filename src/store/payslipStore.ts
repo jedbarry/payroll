@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { PayslipView } from '../domain/types';
-import { getPayslipsByYear, getPayslipYears } from '../db/queries/payslips';
-import { getPayrollRunById } from '../db/queries/payrollRuns';
+import { getPayslipsByYear, getPayslipYears, deletePayslip } from '../db/queries/payslips';
+import { getPayrollRunById, updatePayrollRun } from '../db/queries/payrollRuns';
 import { getEmployeeById } from '../db/queries/employees';
 import { getLineItemsByRun } from '../db/queries/lineItems';
 
@@ -13,6 +13,7 @@ export interface PayslipStore {
   loadAvailableYears: () => Promise<void>;
   loadPayslipsForYear: (year: number) => Promise<void>;
   setSelectedYear: (year: number) => void;
+  deletePayslipAndRevertRun: (payslipId: string, payrollRunId: string) => Promise<void>;
 }
 
 export const usePayslipStore = create<PayslipStore>((set, get) => ({
@@ -62,5 +63,10 @@ export const usePayslipStore = create<PayslipStore>((set, get) => ({
       set({ loading: false });
       throw err;
     }
+  },
+
+  deletePayslipAndRevertRun: async (payslipId: string, payrollRunId: string) => {
+    await deletePayslip(payslipId);
+    await updatePayrollRun(payrollRunId, { status: 'draft' });
   },
 }));
