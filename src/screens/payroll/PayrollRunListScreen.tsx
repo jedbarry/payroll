@@ -53,6 +53,7 @@ export function PayrollRunListScreen({ route, navigation }: any) {
 
       const emp = await getEmployeeById(employeeId);
       if (!emp) return;
+      if (!emp.is_active) return; // Don't auto-generate for archived employees
 
       const existingPeriodKeys = new Set(
         existing.map((r) => `${r.period_start}_${r.period_end}`),
@@ -191,7 +192,7 @@ export function PayrollRunListScreen({ route, navigation }: any) {
                 </View>
               )}
 
-              {/* Action: + Run button if no draft exists */}
+              {/* Action: + New button when no draft (always for archived, manual trigger for active) */}
               {!draftRun && (
                 <TouchableOpacity
                   style={[styles.addRunButton, { backgroundColor: theme.accent }]}
