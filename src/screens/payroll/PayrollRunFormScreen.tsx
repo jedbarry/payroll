@@ -10,14 +10,15 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  SafeAreaView,
+  FlatList,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/ThemeContext';
 import { usePayrollStore } from '../../store/payrollStore';
 import { getEmployeeById } from '../../db/queries/employees';
 import { getPayrollRunById, getPayrollRunsByEmployee } from '../../db/queries/payrollRuns';
-import { getLineItemsByRun } from '../../db/queries/lineItems';
+import { getLineItemsByRun, getDistinctLineItemLabels } from '../../db/queries/lineItems';
 import { getDb } from '../../db/index';
 import { Employee, PayrollRun, LineItem } from '../../domain/types';
 import { getPayPeriods, getBaseAmount } from '../../domain/payPeriod';
@@ -72,6 +73,20 @@ export function PayrollRunFormScreen({ route, navigation }: any) {
   const [itemLabel, setItemLabel] = useState('');
   const [itemAmount, setItemAmount] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+
+  // Label autocomplete
+  const [labelSuggestions, setLabelSuggestions] = useState<string[]>([]);
+  const [showLabelSuggestions, setShowLabelSuggestions] = useState(false);
+
+  useEffect(() => {
+    getDistinctLineItemLabels().then(setLabelSuggestions).catch(() => {});
+  }, []);
+
+  const filteredLabelSuggestions = itemLabel.trim()
+    ? labelSuggestions.filter((l) =>
+        l.toLowerCase().includes(itemLabel.trim().toLowerCase()),
+      )
+    : labelSuggestions;
 
   useEffect(() => {
     let isMounted = true;
@@ -615,21 +630,42 @@ export function PayrollRunFormScreen({ route, navigation }: any) {
             </View>
 
             <View style={styles.inputRow}>
-              <TextInput
-                style={[
-                  styles.itemInput,
-                  {
-                    backgroundColor: theme.surfaceAlt,
-                    borderColor: theme.border,
-                    color: theme.text,
-                    flex: 2,
-                  },
-                ]}
-                placeholder="Label (e.g. Bonus, Tax)"
-                placeholderTextColor={theme.textFaint}
-                value={itemLabel}
-                onChangeText={setItemLabel}
-              />
+              <View style={{ flex: 2 }}>
+                <TextInput
+                  style={[
+                    styles.itemInput,
+                    {
+                      backgroundColor: theme.surfaceAlt,
+                      borderColor: theme.border,
+                      color: theme.text,
+                    },
+                  ]}
+                  placeholder="Label (e.g. Bonus, Tax)"
+                  placeholderTextColor={theme.textFaint}
+                  value={itemLabel}
+                  onChangeText={(t) => { setItemLabel(t); setShowLabelSuggestions(true); }}
+                  onFocus={() => setShowLabelSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowLabelSuggestions(false), 150)}
+                />
+                {showLabelSuggestions && filteredLabelSuggestions.length > 0 && (
+                  <View style={[styles.suggestionsBox, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                    <FlatList
+                      data={filteredLabelSuggestions}
+                      keyExtractor={(item) => item}
+                      scrollEnabled={false}
+                      keyboardShouldPersistTaps="handled"
+                      renderItem={({ item }) => (
+                        <TouchableOpacity
+                          style={[styles.suggestionRow, { borderBottomColor: theme.border }]}
+                          onPress={() => { setItemLabel(item); setShowLabelSuggestions(false); }}
+                        >
+                          <Text style={[styles.suggestionText, { color: theme.text }]}>{item}</Text>
+                        </TouchableOpacity>
+                      )}
+                    />
+                  </View>
+                )}
+              </View>
               <TextInput
                 style={[
                   styles.itemInput,
@@ -837,6 +873,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     fontSize: 14,
   },
+  suggestionsBox: {
+    borderWidth: 1,
+    borderTopWidth: 0,
+    borderBottomLeftRadius: 8,
+    borderBottomRightRadius: 8,
+    overflow: 'hidden',
+    marginTop: -1,
+  },
+  suggestionRow: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  suggestionText: { fontSize: 14 },
   addButton: {
     height: 42,
     borderRadius: 8,

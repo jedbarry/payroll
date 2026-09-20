@@ -57,3 +57,11 @@ export async function deleteLineItemsByRun(payrollRunId: string): Promise<number
   ]);
   return result.changes;
 }
+
+export async function getDistinctLineItemLabels(): Promise<string[]> {
+  const db = getDb();
+  const rows = await db.getAllAsync<{ label: string }>(
+    'SELECT DISTINCT label FROM line_items ORDER BY label COLLATE NOCASE;',
+  );
+  return rows.map((r) => r.label);
+}

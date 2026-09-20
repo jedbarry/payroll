@@ -10,8 +10,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   FlatList,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/ThemeContext';
 import { useEmployeeStore } from '../../store/employeeStore';
@@ -164,7 +164,7 @@ export function EmployeeFormScreen({ route, navigation }: any) {
   const handleArchive = () => {
     if (!employeeId) return;
     Alert.alert(
-      'Archive Employee',
+      'Archive Resource',
       `Are you sure you want to archive ${name}? They will no longer appear as active.`,
       [
         { text: 'Cancel', style: 'cancel' },
@@ -191,7 +191,7 @@ export function EmployeeFormScreen({ route, navigation }: any) {
     );
   };
 
-  const screenTitle = mode === 'edit' && name ? `Edit ${name}` : 'New Employee';
+  const screenTitle = mode === 'edit' && name ? `Edit ${name}` : 'New Resource';
 
   return (
     <KeyboardAvoidingView
@@ -361,7 +361,7 @@ export function EmployeeFormScreen({ route, navigation }: any) {
           activeOpacity={0.8}
         >
           <Text style={[styles.primaryButtonText, { color: theme.accentText }]}>
-            {saving ? 'Saving...' : mode === 'add' ? 'Create Employee' : 'Save Changes'}
+            {saving ? 'Saving...' : mode === 'add' ? 'Create Resource' : 'Save Changes'}
           </Text>
         </TouchableOpacity>
 
@@ -373,7 +373,7 @@ export function EmployeeFormScreen({ route, navigation }: any) {
               onPress={handleArchive}
               activeOpacity={0.7}
             >
-              <Text style={[styles.archiveButtonText, { color: theme.deduction }]}>Archive Employee</Text>
+              <Text style={[styles.archiveButtonText, { color: theme.deduction }]}>Archive Resource</Text>
             </TouchableOpacity>
           </View>
         )}

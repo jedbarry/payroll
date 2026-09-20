@@ -72,7 +72,7 @@ export function EmployeeListScreen({ navigation }: any) {
 
   const handleDelete = (employee: Employee) => {
     Alert.alert(
-      'Delete Employee',
+      'Delete Resource',
       `Permanently delete ${employee.name}? This will erase all their payroll runs, line items, and payslips. This cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
@@ -160,7 +160,7 @@ export function EmployeeListScreen({ navigation }: any) {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.bg }]} edges={['top']}>
       <View style={styles.header}>
-        <Text style={[styles.title, { color: theme.text }]}>Employees</Text>
+        <Text style={[styles.title, { color: theme.text }]}>Resources</Text>
       </View>
 
       {loading && allEmployees.length === 0 ? (
@@ -176,7 +176,7 @@ export function EmployeeListScreen({ navigation }: any) {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={[styles.emptyText, { color: theme.textFaint }]}>
-                No employees yet. Tap + to add one.
+                No resources yet. Tap + to add one.
               </Text>
             </View>
           }
@@ -187,7 +187,7 @@ export function EmployeeListScreen({ navigation }: any) {
         style={[styles.fab, { backgroundColor: theme.accent }]}
         onPress={() => navigation.navigate('EmployeeForm', { mode: 'add' })}
         activeOpacity={0.8}
-        accessibilityLabel="Add Employee"
+        accessibilityLabel="Add Resource"
       >
         <Text style={[styles.fabText, { color: theme.accentText }]}>+</Text>
       </TouchableOpacity>

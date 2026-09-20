@@ -485,3 +485,44 @@ Polish the payroll run and payslip flows based on real usage feedback: fix navig
 #### Bug fixes
 - Fixed `draftRun` → `draftRuns` undefined variable crash in `PayrollRunListScreen`.
 - Removed `initRuns` from focus listener (was causing duplicate draft creation on every screen re-focus).
+
+---
+
+### Sub-Task 12 — UX Polish & Bug Fixes (Round 2)
+
+**Status:** `[x] complete`
+
+**Changes Delivered**
+
+#### Back Button — native circle removed
+- All four stacks (`PayrollStack`, `EmployeesStack`, `PayslipsStack`, `SettingsStack`) set `headerShown: false` globally — native header and its iOS back button are fully suppressed.
+- Every child screen now renders its own **custom header row** inline in the screen body:
+  - `<SafeAreaView>` wrapping a `flexDirection: row` view with a bare `Ionicons chevron-back` (size 28, `theme.text` colour) on the left, centred title, and an invisible spacer on the right.
+  - Screens affected: `EmployeeFormScreen`, `PayrollRunListScreen`, `PayrollRunFormScreen`, `PayslipDetailScreen`, `BackupDetailScreen`.
+- `navigation.setOptions` title calls removed from these screens (title derived from local state instead).
+- `SafeAreaView` imports migrated from `react-native` (deprecated) to `react-native-safe-area-context` across all affected screens.
+
+#### Line item label autocomplete
+- `getDistinctLineItemLabels()` added to `src/db/queries/lineItems.ts` — queries all unique labels ever used across all line items, ordered alphabetically (`COLLATE NOCASE`).
+- `PayrollRunFormScreen` label input now shows a filtered dropdown as you type, identical to the department autocomplete in `EmployeeFormScreen`:
+  - Shows all past labels unfiltered on focus.
+  - Filters by substring as you type.
+  - Tap a suggestion to fill the field and dismiss the dropdown.
+  - Dismisses on blur (150 ms delay to allow tap registration).
+
+#### File permission / startup fix
+- `listDeviceBackups()` no longer calls `ensureBackupFolder()` on mount — it checks if the folder exists and returns `[]` if not. The iOS Files permission dialog is never triggered at startup; only when the user explicitly taps **Backup Now**.
+- `handleBackupNow` in `SyncScreen` now distinguishes permission/cancelled errors and shows a user-friendly alert pointing to **Settings → Payroll → Files** instead of a generic "Backup failed" message.
+
+#### Rename: Employee → Resource
+All user-visible labels renamed throughout the app (code identifiers unchanged):
+
+| Screen / Location | Before | After |
+|---|---|---|
+| Tab bar | Employees | Resources |
+| `EmployeeListScreen` heading | Employees | Resources |
+| Empty state (list & payroll) | No employees yet… | No resources yet… |
+| `EmployeeFormScreen` title (new) | New Employee | New Resource |
+| Form submit button (add) | Create Employee | Create Resource |
+| Archive alert title | Archive Employee | Archive Resource |
+| Delete alert title | Delete Employee | Delete Resource |

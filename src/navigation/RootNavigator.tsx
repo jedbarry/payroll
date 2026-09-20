@@ -35,7 +35,7 @@ export function RootNavigator() {
         name="EmployeesTab"
         component={EmployeesStack}
         options={{
-          tabBarLabel: 'Employees',
+          tabBarLabel: 'Resources',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people" size={size} color={color} />
           ),

@@ -35,7 +35,10 @@ export interface DeviceBackupEntry {
 export async function listDeviceBackups(): Promise<DeviceBackupEntry[]> {
   if (Platform.OS === 'web') return [];
 
-  await ensureBackupFolder();
+  // Don't create the folder on list — if it doesn't exist yet there are no backups.
+  const info = await FileSystem.getInfoAsync(backupFolderUri());
+  if (!info.exists) return [];
+
   const files = await FileSystem.readDirectoryAsync(backupFolderUri());
 
   const entries: DeviceBackupEntry[] = files

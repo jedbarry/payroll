@@ -49,7 +49,16 @@ export function SyncScreen({ navigation }: any) {
       await saveDeviceBackup();
       await loadBackups();
     } catch (err: any) {
-      Alert.alert('Backup failed', err?.message ?? String(err));
+      const msg: string = err?.message ?? String(err);
+      // Permission denied or user cancelled the Files access dialog
+      if (msg.includes('permission') || msg.includes('denied') || msg.includes('cancelled') || msg.includes('canceled')) {
+        Alert.alert(
+          'Permission Required',
+          'Payroll needs access to Files to save backups. You can grant access in Settings → Payroll → Files.',
+        );
+      } else {
+        Alert.alert('Backup failed', msg);
+      }
     } finally {
       setBackingUp(false);
     }

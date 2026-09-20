@@ -98,7 +98,7 @@ export function PayrollEmployeeListScreen({ navigation }: any) {
       ) : allEmployees.length === 0 ? (
         <View style={styles.centered}>
           <Text style={[styles.emptyText, { color: theme.textFaint }]}>
-            No employees yet. Add one in the Employees tab.
+            No resources yet. Add one in the Resources tab.
           </Text>
         </View>
       ) : (
