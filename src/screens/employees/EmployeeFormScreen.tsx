@@ -10,7 +10,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   FlatList,
+  SafeAreaView,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/ThemeContext';
 import { useEmployeeStore } from '../../store/employeeStore';
 import { useDepartmentStore } from '../../store/departmentStore';
@@ -52,14 +54,11 @@ export function EmployeeFormScreen({ route, navigation }: any) {
             setStartDate(emp.start_date ?? '');
             setArchiveDate(emp.archive_date ?? '');
             setIsActive(emp.is_active);
-            navigation.setOptions({ title: `Edit ${emp.name}` });
           }
       });
-    } else {
-      navigation.setOptions({ title: 'New Employee' });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, employeeId, navigation]);
+  }, [mode, employeeId]);
 
   // Fill department text once departments are loaded (edit mode)
   useEffect(() => {
@@ -192,11 +191,26 @@ export function EmployeeFormScreen({ route, navigation }: any) {
     );
   };
 
+  const screenTitle = mode === 'edit' && name ? `Edit ${name}` : 'New Employee';
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={[styles.container, { backgroundColor: theme.bg }]}
     >
+      <SafeAreaView style={{ backgroundColor: theme.bg }}>
+        <View style={[styles.customHeader, { backgroundColor: theme.bg }]}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            activeOpacity={0.6}
+          >
+            <Ionicons name="chevron-back" size={28} color={theme.text} />
+          </TouchableOpacity>
+          <Text style={[styles.customHeaderTitle, { color: theme.text }]}>{screenTitle}</Text>
+          <View style={{ width: 28 }} />
+        </View>
+      </SafeAreaView>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
@@ -370,6 +384,14 @@ export function EmployeeFormScreen({ route, navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  customHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  customHeaderTitle: { fontSize: 17, fontWeight: '600' },
   scrollContent: { padding: 20, paddingBottom: 40 },
   fieldGroup: { marginBottom: 20 },
   label: { fontSize: 14, fontWeight: '500', marginBottom: 8 },

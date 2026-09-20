@@ -7,7 +7,9 @@ import {
   ActivityIndicator,
   Alert,
   ScrollView,
+  SafeAreaView,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { useTheme } from '../../theme/ThemeContext';
@@ -95,10 +97,21 @@ export function BackupDetailScreen({ route, navigation }: any) {
   };
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: theme.bg }]}
-      contentContainerStyle={styles.content}
-    >
+    <View style={[styles.container, { backgroundColor: theme.bg }]}>
+      <SafeAreaView style={{ backgroundColor: theme.bg }}>
+        <View style={[styles.customHeader, { backgroundColor: theme.bg }]}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            activeOpacity={0.6}
+          >
+            <Ionicons name="chevron-back" size={28} color={theme.text} />
+          </TouchableOpacity>
+          <Text style={[styles.customHeaderTitle, { color: theme.text }]}>Backup Details</Text>
+          <View style={{ width: 28 }} />
+        </View>
+      </SafeAreaView>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content}>
       {/* Info card */}
       <View style={[styles.infoCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
         <Row label="Created" value={formattedDate} theme={theme} />
@@ -147,7 +160,8 @@ export function BackupDetailScreen({ route, navigation }: any) {
           <Text style={[styles.dangerButtonText, { color: theme.deduction }]}>Delete Backup</Text>
         )}
       </TouchableOpacity>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -189,6 +203,14 @@ function formatBackupDate(iso: string): string {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  customHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  customHeaderTitle: { fontSize: 17, fontWeight: '600' },
   content: { padding: 16, paddingBottom: 40 },
   infoCard: {
     borderRadius: 12,

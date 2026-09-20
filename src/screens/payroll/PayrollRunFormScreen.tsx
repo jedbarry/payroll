@@ -10,7 +10,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  SafeAreaView,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/ThemeContext';
 import { usePayrollStore } from '../../store/payrollStore';
 import { getEmployeeById } from '../../db/queries/employees';
@@ -97,10 +99,6 @@ export function PayrollRunFormScreen({ route, navigation }: any) {
           const items = await getLineItemsByRun(run.id);
           if (isMounted) setLineItems(items);
 
-          navigation.setOptions({
-            title: run.status === 'committed' ? 'Committed Run' : 'Draft Run',
-          });
-
         } else if (paramEmployeeId) {
           // New run
           const emp = await getEmployeeById(paramEmployeeId);
@@ -111,7 +109,6 @@ export function PayrollRunFormScreen({ route, navigation }: any) {
           }
           if (!isMounted) return;
           setEmployee(emp);
-          navigation.setOptions({ title: `New Run: ${emp.name}` });
 
           // Build full list of available periods for this year, tagged with used status
           const existingRuns = await getPayrollRunsByEmployee(paramEmployeeId);
@@ -356,6 +353,10 @@ export function PayrollRunFormScreen({ route, navigation }: any) {
     ]);
   };
 
+  const screenTitle = currentRun
+    ? currentRun.status === 'committed' ? 'Committed Run' : 'Draft Run'
+    : employee ? `New Run: ${employee.name}` : 'Payroll';
+
   if (loading) {
     return (
       <View style={[styles.centered, { backgroundColor: theme.bg }]}>
@@ -369,6 +370,19 @@ export function PayrollRunFormScreen({ route, navigation }: any) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={[styles.container, { backgroundColor: theme.bg }]}
     >
+      <SafeAreaView style={{ backgroundColor: theme.bg }}>
+        <View style={[styles.customHeader, { backgroundColor: theme.bg }]}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            activeOpacity={0.6}
+          >
+            <Ionicons name="chevron-back" size={28} color={theme.text} />
+          </TouchableOpacity>
+          <Text style={[styles.customHeaderTitle, { color: theme.text }]}>{screenTitle}</Text>
+          <View style={{ width: 28 }} />
+        </View>
+      </SafeAreaView>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Employee / Period tile */}
         <View
@@ -689,9 +703,15 @@ export function PayrollRunFormScreen({ route, navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { flex: 1 },
+  customHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
+  customHeaderTitle: { fontSize: 17, fontWeight: '600' },
   scrollContent: {
     padding: 16,
     paddingBottom: 40,

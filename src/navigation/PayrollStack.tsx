@@ -5,7 +5,6 @@ import { PayrollEmployeeListScreen } from '../screens/payroll/PayrollEmployeeLis
 import { PayrollRunListScreen } from '../screens/payroll/PayrollRunListScreen';
 import { PayrollRunFormScreen } from '../screens/payroll/PayrollRunFormScreen';
 import { PayslipDetailScreen } from '../screens/payslips/PayslipDetailScreen';
-
 export type PayrollStackParamList = {
   PayrollEmployeeList: undefined;
   PayrollRunList: { employeeId: string; employeeName: string };
@@ -21,36 +20,14 @@ export function PayrollStack() {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: theme.navBar },
-        headerTintColor: theme.accent,
-        headerTitleStyle: { color: theme.text, fontWeight: '600' },
         contentStyle: { backgroundColor: theme.bg },
+        headerShown: false,
       }}
     >
-      <Stack.Screen
-        name="PayrollEmployeeList"
-        component={PayrollEmployeeListScreen}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="PayrollRunList"
-        component={PayrollRunListScreen}
-        options={({ route }) => ({
-          title: route.params?.employeeName
-            ? `${route.params.employeeName}'s Payroll`
-            : 'Payroll',
-        })}
-      />
-      <Stack.Screen
-        name="PayrollRunForm"
-        component={PayrollRunFormScreen}
-        options={{ title: 'Payroll' }}
-      />
-      <Stack.Screen
-        name="PayslipDetail"
-        component={PayslipDetailScreen}
-        options={{ title: 'Payslip' }}
-      />
+      <Stack.Screen name="PayrollEmployeeList" component={PayrollEmployeeListScreen} />
+      <Stack.Screen name="PayrollRunList" component={PayrollRunListScreen} />
+      <Stack.Screen name="PayrollRunForm" component={PayrollRunFormScreen} />
+      <Stack.Screen name="PayslipDetail" component={PayslipDetailScreen} />
     </Stack.Navigator>
   );
 }

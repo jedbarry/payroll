@@ -6,6 +6,7 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/ThemeContext';
@@ -53,7 +54,7 @@ function formatCurrency(amount: number): string {
 
 export function EmployeeListScreen({ navigation }: any) {
   const { theme } = useTheme();
-  const { allEmployees, loading, loadEmployees } = useEmployeeStore();
+  const { allEmployees, loading, loadEmployees, deleteEmployee } = useEmployeeStore();
   const { departments, loadDepartments } = useDepartmentStore();
 
   useEffect(() => {
@@ -68,6 +69,27 @@ export function EmployeeListScreen({ navigation }: any) {
 
   const activeEmployees = allEmployees.filter((e) => e.is_active);
   const archivedEmployees = allEmployees.filter((e) => !e.is_active);
+
+  const handleDelete = (employee: Employee) => {
+    Alert.alert(
+      'Delete Employee',
+      `Permanently delete ${employee.name}? This will erase all their payroll runs, line items, and payslips. This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteEmployee(employee.id);
+            } catch (err: any) {
+              Alert.alert('Delete failed', err?.message ?? String(err));
+            }
+          },
+        },
+      ],
+    );
+  };
 
   const renderEmployeeCard = (employee: Employee, isArchived = false) => {
     const scheduleLabel = formatSchedule(employee.pay_schedule);
@@ -118,6 +140,16 @@ export function EmployeeListScreen({ navigation }: any) {
               <View style={[styles.archivedBadge, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
                 <Text style={[styles.archivedText, { color: theme.textMuted }]}>Archived</Text>
               </View>
+            )}
+            {isArchived && (
+              <TouchableOpacity
+                style={[styles.deleteBtn, { borderColor: theme.deduction }]}
+                onPress={() => handleDelete(employee)}
+                activeOpacity={0.7}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text style={[styles.deleteBtnText, { color: theme.deduction }]}>Delete</Text>
+              </TouchableOpacity>
             )}
           </View>
         </View>
@@ -238,6 +270,16 @@ const styles = StyleSheet.create({
   },
   archivedText: {
     fontSize: 12,
+  },
+  deleteBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  deleteBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
   centered: {
     flex: 1,

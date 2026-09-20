@@ -17,29 +17,12 @@ export function PayslipsStack() {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: {
-          backgroundColor: theme.navBar,
-        },
-        headerTintColor: theme.accent,
-        headerTitleStyle: {
-          color: theme.text,
-          fontWeight: '600',
-        },
-        contentStyle: {
-          backgroundColor: theme.bg,
-        },
+        contentStyle: { backgroundColor: theme.bg },
+        headerShown: false,
       }}
     >
-      <Stack.Screen
-        name="PayslipList"
-        component={PayslipListScreen}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="PayslipDetail"
-        component={PayslipDetailScreen}
-        options={{ title: 'Payslip' }}
-      />
+      <Stack.Screen name="PayslipList" component={PayslipListScreen} />
+      <Stack.Screen name="PayslipDetail" component={PayslipDetailScreen} />
     </Stack.Navigator>
   );
 }

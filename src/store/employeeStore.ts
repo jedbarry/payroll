@@ -5,6 +5,7 @@ import {
   insertEmployee,
   updateEmployee as updateEmployeeQuery,
   archiveEmployee as archiveEmployeeQuery,
+  deleteEmployee as deleteEmployeeQuery,
 } from '../db/queries/employees';
 
 export interface EmployeeStore {
@@ -15,6 +16,7 @@ export interface EmployeeStore {
   addEmployee: (data: Omit<Employee, 'id' | 'created_at' | 'is_active'>) => Promise<Employee>;
   updateEmployee: (id: string, data: Partial<Omit<Employee, 'id' | 'created_at'>>) => Promise<void>;
   archiveEmployee: (id: string) => Promise<void>;
+  deleteEmployee: (id: string) => Promise<void>;
 }
 
 export const useEmployeeStore = create<EmployeeStore>((set, get) => ({
@@ -63,6 +65,16 @@ export const useEmployeeStore = create<EmployeeStore>((set, get) => ({
     try {
       await archiveEmployeeQuery(id);
       await get().loadEmployees();
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  deleteEmployee: async (id) => {
+    set({ loading: true });
+    try {
+      await deleteEmployeeQuery(id);
+      await get().loadEmployees(true);
     } finally {
       set({ loading: false });
     }

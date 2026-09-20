@@ -18,22 +18,12 @@ export function SettingsStack() {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: theme.navBar },
-        headerTintColor: theme.accent,
-        headerTitleStyle: { color: theme.text, fontWeight: '600' },
         contentStyle: { backgroundColor: theme.bg },
+        headerShown: false,
       }}
     >
-      <Stack.Screen
-        name="SettingsList"
-        component={SyncScreen}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="BackupDetail"
-        component={BackupDetailScreen}
-        options={{ title: 'Backup Details' }}
-      />
+      <Stack.Screen name="SettingsList" component={SyncScreen} />
+      <Stack.Screen name="BackupDetail" component={BackupDetailScreen} />
     </Stack.Navigator>
   );
 }

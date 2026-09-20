@@ -128,3 +128,22 @@ export async function archiveEmployee(id: string): Promise<boolean> {
   const result = await db.runAsync('UPDATE employees SET is_active = 0 WHERE id = ?;', [id]);
   return result.changes > 0;
 }
+
+export async function deleteEmployee(id: string): Promise<void> {
+  const db = getDb();
+  // Delete in FK-safe order: payslips → line_items → payroll_runs → employee
+  await db.runAsync(
+    `DELETE FROM payslips WHERE employee_id = ?;`,
+    [id],
+  );
+  await db.runAsync(
+    `DELETE FROM line_items WHERE payroll_run_id IN
+       (SELECT id FROM payroll_runs WHERE employee_id = ?);`,
+    [id],
+  );
+  await db.runAsync(
+    `DELETE FROM payroll_runs WHERE employee_id = ?;`,
+    [id],
+  );
+  await db.runAsync(`DELETE FROM employees WHERE id = ?;`, [id]);
+}

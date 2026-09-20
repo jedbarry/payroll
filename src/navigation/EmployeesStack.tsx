@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
 import { EmployeeListScreen } from '../screens/employees/EmployeeListScreen';
 import { EmployeeFormScreen } from '../screens/employees/EmployeeFormScreen';
+import { BackButton } from './BackButton';
 
 export type EmployeesStackParamList = {
   EmployeeList: undefined;
@@ -17,29 +18,12 @@ export function EmployeesStack() {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: {
-          backgroundColor: theme.navBar,
-        },
-        headerTintColor: theme.accent,
-        headerTitleStyle: {
-          color: theme.text,
-          fontWeight: '600',
-        },
-        contentStyle: {
-          backgroundColor: theme.bg,
-        },
+        contentStyle: { backgroundColor: theme.bg },
+        headerShown: false,
       }}
     >
-      <Stack.Screen
-        name="EmployeeList"
-        component={EmployeeListScreen}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="EmployeeForm"
-        component={EmployeeFormScreen}
-        options={{ title: 'Employee' }}
-      />
+      <Stack.Screen name="EmployeeList" component={EmployeeListScreen} />
+      <Stack.Screen name="EmployeeForm" component={EmployeeFormScreen} />
     </Stack.Navigator>
   );
 }

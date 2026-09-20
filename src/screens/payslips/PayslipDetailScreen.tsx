@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Alert,
   TouchableOpacity,
+  SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/ThemeContext';
@@ -72,33 +73,23 @@ export function PayslipDetailScreen({ route, navigation }: any) {
     );
   };
 
-  useEffect(() => {
+  const handleBack = () => {
     const employeeId = route.params?.employeeId;
     const employeeName = route.params?.employeeName;
-    navigation.setOptions({
-      title: 'Payslip',
-      headerLeft: () => (
-        <TouchableOpacity
-          onPress={() => {
-            if (employeeId) {
-              navigation.reset({
-                index: 1,
-                routes: [
-                  { name: 'PayrollEmployeeList' },
-                  { name: 'PayrollRunList', params: { employeeId, employeeName } },
-                ],
-              });
-            } else {
-              navigation.goBack();
-            }
-          }}
-          style={{ marginRight: 8 }}
-        >
-          <Ionicons name="chevron-back" size={24} color={theme.accent} />
-        </TouchableOpacity>
-      ),
-    });
+    if (employeeId) {
+      navigation.reset({
+        index: 1,
+        routes: [
+          { name: 'PayrollEmployeeList' },
+          { name: 'PayrollRunList', params: { employeeId, employeeName } },
+        ],
+      });
+    } else {
+      navigation.goBack();
+    }
+  };
 
+  useEffect(() => {
     let isMounted = true;
     async function loadData() {
       if (!payslipId) return;
@@ -170,7 +161,21 @@ export function PayslipDetailScreen({ route, navigation }: any) {
   }
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: theme.bg }]} contentContainerStyle={styles.content}>
+    <View style={[styles.container, { backgroundColor: theme.bg }]}>
+      <SafeAreaView style={{ backgroundColor: theme.bg }}>
+        <View style={[styles.customHeader, { backgroundColor: theme.bg }]}>
+          <TouchableOpacity
+            onPress={handleBack}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            activeOpacity={0.6}
+          >
+            <Ionicons name="chevron-back" size={28} color={theme.text} />
+          </TouchableOpacity>
+          <Text style={[styles.customHeaderTitle, { color: theme.text }]}>Payslip</Text>
+          <View style={{ width: 28 }} />
+        </View>
+      </SafeAreaView>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content}>
       {/* Header Card */}
       <View style={[styles.headerCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
         <Text style={[styles.employeeName, { color: theme.text }]}>{employee.name}</Text>
@@ -312,13 +317,20 @@ export function PayslipDetailScreen({ route, navigation }: any) {
         </Text>
       </TouchableOpacity>
     </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { flex: 1 },
+  customHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
+  customHeaderTitle: { fontSize: 17, fontWeight: '600' },
   content: {
     padding: 16,
     paddingBottom: 40,

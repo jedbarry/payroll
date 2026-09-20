@@ -6,7 +6,9 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
+  SafeAreaView,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/ThemeContext';
 import { usePayrollStore } from '../../store/payrollStore';
 import { PayrollRun } from '../../domain/types';
@@ -34,12 +36,6 @@ export function PayrollRunListScreen({ route, navigation }: any) {
   const { theme } = useTheme();
   const { employeeId, employeeName } = route.params || {};
   const { runs, loading, loadRunsForEmployee, saveDraft } = usePayrollStore();
-
-  useEffect(() => {
-    navigation.setOptions({
-      title: employeeName ? `${employeeName}'s Payroll` : 'Payroll',
-    });
-  }, [navigation, employeeName]);
 
   // Reload on focus (returning from form etc.)
   useEffect(() => {
@@ -133,8 +129,23 @@ export function PayrollRunListScreen({ route, navigation }: any) {
     }
   };
 
+  const screenTitle = employeeName ? `${employeeName}'s Payroll` : 'Payroll';
+
   return (
     <View style={[styles.container, { backgroundColor: theme.bg }]}>
+      <SafeAreaView style={{ backgroundColor: theme.bg }}>
+        <View style={[styles.customHeader, { backgroundColor: theme.bg }]}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            activeOpacity={0.6}
+          >
+            <Ionicons name="chevron-back" size={28} color={theme.text} />
+          </TouchableOpacity>
+          <Text style={[styles.customHeaderTitle, { color: theme.text }]}>{screenTitle}</Text>
+          <View style={{ width: 28 }} />
+        </View>
+      </SafeAreaView>
       {loading && runs.length === 0 ? (
         <View style={styles.centered}>
           <ActivityIndicator color={theme.accent} size="large" />
@@ -274,9 +285,15 @@ export function PayrollRunListScreen({ route, navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { flex: 1 },
+  customHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
+  customHeaderTitle: { fontSize: 17, fontWeight: '600' },
   listContent: {
     padding: 16,
     paddingBottom: 40,

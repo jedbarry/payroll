@@ -33,8 +33,7 @@ export function LineItemRow({ item, onRemove, showRemove = false }: LineItemRowP
       </View>
       <View style={styles.amountContainer}>
         <Text style={[styles.amount, { color: textColor }]}>
-          {prefix}$
-          {item.amount.toLocaleString('en-US', {
+          {prefix}PHP {item.amount.toLocaleString('en-US', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
           })}
