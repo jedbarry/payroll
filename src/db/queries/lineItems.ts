@@ -8,6 +8,7 @@ interface LineItemRow {
   type: string;
   label: string;
   amount: number;
+  subtype: string | null;
 }
 
 function mapLineItemRow(row: LineItemRow): LineItem {
@@ -15,6 +16,7 @@ function mapLineItemRow(row: LineItemRow): LineItem {
     id: row.id,
     payroll_run_id: row.payroll_run_id,
     type: row.type as 'inclusion' | 'deduction',
+    subtype: (row.subtype as 'cash_advance' | null) ?? null,
     label: row.label,
     amount: row.amount,
   };
@@ -27,15 +29,16 @@ export async function insertLineItem(
   const id = item.id ?? generateId();
 
   await db.runAsync(
-    `INSERT INTO line_items (id, payroll_run_id, type, label, amount)
-     VALUES (?, ?, ?, ?, ?);`,
-    [id, item.payroll_run_id, item.type, item.label, item.amount],
+    `INSERT INTO line_items (id, payroll_run_id, type, label, amount, subtype)
+     VALUES (?, ?, ?, ?, ?, ?);`,
+    [id, item.payroll_run_id, item.type, item.label, item.amount, item.subtype ?? null],
   );
 
   return {
     id,
     payroll_run_id: item.payroll_run_id,
     type: item.type,
+    subtype: item.subtype ?? null,
     label: item.label,
     amount: item.amount,
   };

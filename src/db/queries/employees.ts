@@ -1,6 +1,7 @@
 import { getDb } from '../index';
 import { Employee, PaySchedule, PayDayConfig } from '../../domain/types';
 import { generateId } from '../utils';
+import { insertPayHistory } from './payHistory';
 
 interface EmployeeRow {
   id: string;
@@ -55,7 +56,7 @@ export async function insertEmployee(
     ],
   );
 
-  return {
+  const result: Employee = {
     id,
     name: employee.name,
     monthly_rate: employee.monthly_rate,
@@ -67,6 +68,17 @@ export async function insertEmployee(
     archive_date: employee.archive_date ?? null,
     created_at,
   };
+
+  // Auto-create the first pay history row
+  const effectiveFrom = employee.start_date ?? created_at.substring(0, 10);
+  await insertPayHistory({
+    employee_id: id,
+    monthly_rate: employee.monthly_rate,
+    effective_from: effectiveFrom,
+    effective_to: null,
+  });
+
+  return result;
 }
 
 export async function getEmployees(includeInactive = false): Promise<Employee[]> {

@@ -4,6 +4,8 @@ import {
   MIGRATE_EMPLOYEES_ADD_DEPARTMENT,
   MIGRATE_EMPLOYEES_ADD_START_DATE,
   MIGRATE_EMPLOYEES_ADD_ARCHIVE_DATE,
+  MIGRATE_LINE_ITEMS_ADD_SUBTYPE,
+  MIGRATE_BACKFILL_PAY_HISTORY,
 } from './schema';
 
 let dbInstance: SQLite.SQLiteDatabase | null = null;
@@ -20,11 +22,12 @@ export async function initDb(): Promise<SQLite.SQLiteDatabase> {
     await db.execAsync(schema);
   }
 
-  // Migrations: add columns to employees for existing databases
+  // Migrations: add columns for existing databases
   for (const migration of [
     MIGRATE_EMPLOYEES_ADD_DEPARTMENT,
     MIGRATE_EMPLOYEES_ADD_START_DATE,
     MIGRATE_EMPLOYEES_ADD_ARCHIVE_DATE,
+    MIGRATE_LINE_ITEMS_ADD_SUBTYPE,
   ]) {
     try {
       await db.execAsync(migration);
@@ -32,6 +35,9 @@ export async function initDb(): Promise<SQLite.SQLiteDatabase> {
       // Column already exists — safe to ignore
     }
   }
+
+  // Backfill pay_history for existing employees (idempotent — skips employees already with history)
+  await db.execAsync(MIGRATE_BACKFILL_PAY_HISTORY);
 
   dbInstance = db;
   return dbInstance;

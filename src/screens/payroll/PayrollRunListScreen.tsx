@@ -16,6 +16,7 @@ import { getDb } from '../../db/index';
 import { getEmployeeById } from '../../db/queries/employees';
 import { getPayrollRunsByEmployee } from '../../db/queries/payrollRuns';
 import { getPayPeriods, getBaseAmount } from '../../domain/payPeriod';
+import { getRateForPeriod } from '../../db/queries/payHistory';
 
 function formatCurrency(amount: number): string {
   return `PHP ${amount.toLocaleString('en-US', {
@@ -85,7 +86,9 @@ export function PayrollRunListScreen({ route, navigation }: any) {
 
       if (!period || cancelled) return;
 
-      const base = getBaseAmount(emp.monthly_rate, emp.pay_schedule, period.month, period.year);
+      const historicalRate =
+        (await getRateForPeriod(employeeId, period.start)) ?? emp.monthly_rate;
+      const base = getBaseAmount(historicalRate, emp.pay_schedule, period.month, period.year);
       await saveDraft(
         {
           employee_id: employeeId,

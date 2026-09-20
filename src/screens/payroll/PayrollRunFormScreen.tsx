@@ -19,6 +19,7 @@ import { usePayrollStore } from '../../store/payrollStore';
 import { getEmployeeById } from '../../db/queries/employees';
 import { getPayrollRunById, getPayrollRunsByEmployee } from '../../db/queries/payrollRuns';
 import { getLineItemsByRun, getDistinctLineItemLabels } from '../../db/queries/lineItems';
+import { getRateForPeriod } from '../../db/queries/payHistory';
 import { getDb } from '../../db/index';
 import { Employee, PayrollRun, LineItem } from '../../domain/types';
 import { getPayPeriods, getBaseAmount } from '../../domain/payPeriod';
@@ -183,8 +184,10 @@ export function PayrollRunFormScreen({ route, navigation }: any) {
             if (currentPeriod) {
               setPeriodStart(currentPeriod.start);
               setPeriodEnd(currentPeriod.end);
+              const historicalRate =
+                (await getRateForPeriod(emp.id, currentPeriod.start)) ?? emp.monthly_rate;
               setBaseAmount(
-                getBaseAmount(emp.monthly_rate, emp.pay_schedule, currentPeriod.month, currentPeriod.year),
+                getBaseAmount(historicalRate, emp.pay_schedule, currentPeriod.month, currentPeriod.year),
               );
             }
             setLineItems([]);
@@ -206,12 +209,14 @@ export function PayrollRunFormScreen({ route, navigation }: any) {
   const isCommitted = currentRun?.status === 'committed';
 
   const handleSelectPeriod = useCallback(
-    (p: { start: string; end: string; month: number; year: number; used: boolean }) => {
+    async (p: { start: string; end: string; month: number; year: number; used: boolean }) => {
       if (p.used || !employee) return;
       setPeriodStart(p.start);
       setPeriodEnd(p.end);
+      const historicalRate =
+        (await getRateForPeriod(employee.id, p.start)) ?? employee.monthly_rate;
       setBaseAmount(
-        getBaseAmount(employee.monthly_rate, employee.pay_schedule, p.month, p.year),
+        getBaseAmount(historicalRate, employee.pay_schedule, p.month, p.year),
       );
     },
     [employee],
@@ -238,6 +243,7 @@ export function PayrollRunFormScreen({ route, navigation }: any) {
       ...prev,
       {
         type: itemType,
+        subtype: null,
         label: trimmedLabel,
         amount: parsedAmount,
       },

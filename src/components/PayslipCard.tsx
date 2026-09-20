@@ -67,7 +67,7 @@ export function PayslipCard({ payslip, onPress }: PayslipCardProps) {
 
       <View style={styles.rightRow}>
         <Text style={[styles.amount, { color: theme.text }]}>
-          {formatCurrency(payslip.run?.net_pay ?? 0)}
+          {formatCurrency(payslip.run?.gross_pay ?? 0)}
         </Text>
         <Text style={[styles.scheduleLabel, { color: theme.textMuted }]}>{scheduleLabel}</Text>
       </View>

@@ -17,12 +17,21 @@ import { useTheme } from '../../theme/ThemeContext';
 import { useEmployeeStore } from '../../store/employeeStore';
 import { useDepartmentStore } from '../../store/departmentStore';
 import { getEmployeeById } from '../../db/queries/employees';
-import { PaySchedule, PayDayConfig } from '../../domain/types';
+import {
+  getPayHistoryByEmployee,
+  insertPayHistory,
+  updatePayHistory,
+  deletePayHistory,
+  makePayHistoryCurrent,
+} from '../../db/queries/payHistory';
+import { updateEmployee as updateEmployeeQuery } from '../../db/queries/employees';
+import { PaySchedule, PayDayConfig, PayHistory } from '../../domain/types';
 import { DatePickerField } from '../../components/DatePickerField';
+import { getBaseAmount } from '../../domain/payPeriod';
 
 export function EmployeeFormScreen({ route, navigation }: any) {
   const { theme } = useTheme();
-  const { addEmployee, updateEmployee } = useEmployeeStore();
+  const { addEmployee, updateEmployee, loadEmployees } = useEmployeeStore();
   const { departments, loadDepartments, ensureDepartment } = useDepartmentStore();
 
   const mode: 'add' | 'edit' = route.params?.mode || 'add';
@@ -38,6 +47,15 @@ export function EmployeeFormScreen({ route, navigation }: any) {
   const [archiveDate, setArchiveDate] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [payHistory, setPayHistory] = useState<PayHistory[]>([]);
+  const [currentSchedule, setCurrentSchedule] = useState<PaySchedule>('monthly');
+
+  // Pay history editing state
+  type HistoryFormMode = { type: 'add' } | { type: 'edit'; id: string };
+  const [historyFormMode, setHistoryFormMode] = useState<HistoryFormMode | null>(null);
+  const [historyRate, setHistoryRate] = useState('');
+  const [historyFrom, setHistoryFrom] = useState('');
+  const [historyTo, setHistoryTo] = useState('');
 
   useEffect(() => {
     loadDepartments();
@@ -50,12 +68,14 @@ export function EmployeeFormScreen({ route, navigation }: any) {
             setName(emp.name);
             setMonthlyRate(emp.monthly_rate.toString());
             setSchedule(emp.pay_schedule);
+            setCurrentSchedule(emp.pay_schedule);
             setPayDayConfig(emp.pay_day_config);
             setStartDate(emp.start_date ?? '');
             setArchiveDate(emp.archive_date ?? '');
             setIsActive(emp.is_active);
           }
       });
+      getPayHistoryByEmployee(employeeId).then(setPayHistory).catch(() => {});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, employeeId]);
@@ -158,6 +178,92 @@ export function EmployeeFormScreen({ route, navigation }: any) {
     setArchiveDate(date ?? '');
     if (date) {
       setIsActive(false);
+    }
+  };
+
+  const reloadHistory = () => {
+    if (employeeId) getPayHistoryByEmployee(employeeId).then(setPayHistory).catch(() => {});
+  };
+
+  const openAddHistory = () => {
+    setHistoryRate('');
+    setHistoryFrom('');
+    setHistoryTo('');
+    setHistoryFormMode({ type: 'add' });
+  };
+
+  const openEditHistory = (entry: PayHistory) => {
+    setHistoryRate(entry.monthly_rate.toString());
+    setHistoryFrom(entry.effective_from);
+    setHistoryTo(entry.effective_to ?? '');
+    setHistoryFormMode({ type: 'edit', id: entry.id });
+  };
+
+  const cancelHistoryForm = () => setHistoryFormMode(null);
+
+  const saveHistoryForm = async () => {
+    if (!employeeId) return;
+    const rate = parseFloat(historyRate);
+    if (isNaN(rate) || rate <= 0) { Alert.alert('Validation Error', 'Rate must be greater than 0.'); return; }
+    if (!historyFrom) { Alert.alert('Validation Error', 'Effective From date is required.'); return; }
+    const effectiveTo = historyTo.trim() || null;
+    try {
+      if (historyFormMode?.type === 'add') {
+        await insertPayHistory({
+          employee_id: employeeId,
+          monthly_rate: rate,
+          effective_from: historyFrom,
+          effective_to: effectiveTo,
+        });
+      } else if (historyFormMode?.type === 'edit') {
+        await updatePayHistory(historyFormMode.id, {
+          monthly_rate: rate,
+          effective_from: historyFrom,
+          effective_to: effectiveTo,
+        });
+      }
+      // If this entry is current (no end date), sync employee.monthly_rate
+      if (effectiveTo === null) {
+        await updateEmployeeQuery(employeeId, { monthly_rate: rate });
+        setMonthlyRate(rate.toString());
+        await loadEmployees(true);
+      }
+      setHistoryFormMode(null);
+      reloadHistory();
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to save.');
+    }
+  };
+
+  const handleDeleteHistory = (entry: PayHistory) => {
+    Alert.alert('Delete Entry', 'Delete this pay history entry?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete', style: 'destructive',
+        onPress: async () => {
+          try {
+            await deletePayHistory(entry.id);
+            reloadHistory();
+          } catch (err: any) {
+            Alert.alert('Error', err.message || 'Failed to delete.');
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleMakeCurrent = async (entry: PayHistory) => {
+    if (!employeeId) return;
+    try {
+      await makePayHistoryCurrent(entry.id, employeeId);
+      // Sync employee.monthly_rate to the new current rate
+      await updateEmployeeQuery(employeeId, { monthly_rate: entry.monthly_rate });
+      setMonthlyRate(entry.monthly_rate.toString());
+      // Refresh store so Resources list and any other screen shows updated rate
+      await loadEmployees(true);
+      reloadHistory();
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to update.');
     }
   };
 
@@ -353,6 +459,142 @@ export function EmployeeFormScreen({ route, navigation }: any) {
           clearable
         />
 
+        {/* Pay History (edit mode only) */}
+        {mode === 'edit' && (
+          <View style={styles.fieldGroup}>
+            <View style={styles.historyHeader}>
+              <Text style={[styles.label, { color: theme.textMuted, marginBottom: 0 }]}>Pay History</Text>
+              {historyFormMode === null && (
+                <TouchableOpacity onPress={openAddHistory} activeOpacity={0.7}>
+                  <Text style={[styles.historyAddBtn, { color: theme.accent }]}>+ Add Entry</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Inline add/edit form */}
+            {historyFormMode !== null && (
+              <View style={[styles.historyFormCard, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
+                <Text style={[styles.historyFormTitle, { color: theme.text }]}>
+                  {historyFormMode.type === 'add' ? 'New Entry' : 'Edit Entry'}
+                </Text>
+                <Text style={[styles.historyFormLabel, { color: theme.textMuted }]}>Monthly Rate (PHP)</Text>
+                <TextInput
+                  style={[styles.historyFormInput, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]}
+                  value={historyRate}
+                  onChangeText={setHistoryRate}
+                  keyboardType="numeric"
+                  placeholder="e.g. 5000"
+                  placeholderTextColor={theme.textFaint}
+                />
+                <Text style={[styles.historyFormLabel, { color: theme.textMuted }]}>Effective From (YYYY-MM-DD)</Text>
+                <TextInput
+                  style={[styles.historyFormInput, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]}
+                  value={historyFrom}
+                  onChangeText={setHistoryFrom}
+                  placeholder="e.g. 2024-01-01"
+                  placeholderTextColor={theme.textFaint}
+                />
+                <Text style={[styles.historyFormLabel, { color: theme.textMuted }]}>Effective To (YYYY-MM-DD, blank = current)</Text>
+                <TextInput
+                  style={[styles.historyFormInput, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]}
+                  value={historyTo}
+                  onChangeText={setHistoryTo}
+                  placeholder="Leave blank if current"
+                  placeholderTextColor={theme.textFaint}
+                />
+                <View style={styles.historyFormActions}>
+                  <TouchableOpacity
+                    style={[styles.historyFormCancel, { borderColor: theme.border }]}
+                    onPress={cancelHistoryForm}
+                  >
+                    <Text style={[styles.historyFormCancelText, { color: theme.textMuted }]}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.historyFormSave, { backgroundColor: theme.accent }]}
+                    onPress={saveHistoryForm}
+                  >
+                    <Text style={[styles.historyFormSaveText, { color: theme.accentText }]}>Save</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            {/* Entry list */}
+            {payHistory.length > 0 && (
+              <View style={[styles.historyCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                {[...payHistory].reverse().map((entry, idx) => {
+                  const isCurrent = entry.effective_to === null;
+                  const isEditing = historyFormMode?.type === 'edit' && historyFormMode.id === entry.id;
+                  const now = new Date();
+                  const perPeriod = getBaseAmount(entry.monthly_rate, currentSchedule, now.getMonth(), now.getFullYear());
+                  const perPeriodLabel =
+                    currentSchedule === 'weekly'
+                      ? `PHP ${perPeriod.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / wk`
+                      : currentSchedule === 'biweekly'
+                      ? `PHP ${perPeriod.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / bi-wk`
+                      : null;
+                  const fmtDate = (iso: string) => {
+                    const d = new Date(iso + 'T00:00:00');
+                    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                  };
+                  return (
+                    <View
+                      key={entry.id}
+                      style={[
+                        styles.historyRow,
+                        idx < payHistory.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.border },
+                        isEditing && { opacity: 0.4 },
+                      ]}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.historyRate, { color: theme.text }]}>
+                          PHP {entry.monthly_rate.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          <Text style={[styles.historyRateSuffix, { color: theme.textMuted }]}> / mo</Text>
+                        </Text>
+                        {perPeriodLabel && (
+                          <Text style={[styles.historyPerPeriod, { color: theme.textMuted }]}>{perPeriodLabel}</Text>
+                        )}
+                        <Text style={[styles.historyDates, { color: theme.textMuted }]}>
+                          {fmtDate(entry.effective_from)} – {isCurrent ? 'Present' : fmtDate(entry.effective_to!)}
+                        </Text>
+                      </View>
+                      <View style={styles.historyActions}>
+                        {isCurrent ? (
+                          <View style={[styles.currentBadge, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
+                            <Text style={[styles.currentBadgeText, { color: theme.accent }]}>Current</Text>
+                          </View>
+                        ) : (
+                          <TouchableOpacity
+                            style={[styles.historyActionBtn, { borderColor: theme.accent }]}
+                            onPress={() => handleMakeCurrent(entry)}
+                            activeOpacity={0.7}
+                          >
+                            <Text style={[styles.historyActionBtnText, { color: theme.accent }]}>Make Current</Text>
+                          </TouchableOpacity>
+                        )}
+                        <TouchableOpacity
+                          style={[styles.historyActionBtn, { borderColor: theme.border }]}
+                          onPress={() => openEditHistory(entry)}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={[styles.historyActionBtnText, { color: theme.text }]}>Edit</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.historyActionBtn, { borderColor: theme.deduction }]}
+                          onPress={() => handleDeleteHistory(entry)}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={[styles.historyActionBtnText, { color: theme.deduction }]}>Delete</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+          </View>
+        )}
+
         {/* Save */}
         <TouchableOpacity
           style={[styles.primaryButton, { backgroundColor: theme.accent }]}
@@ -411,4 +653,118 @@ const styles = StyleSheet.create({
   editActions: { marginTop: 24, gap: 12 },
   archiveButton: { height: 50, borderRadius: 10, borderWidth: 1, justifyContent: 'center', alignItems: 'center' },
   archiveButtonText: { fontSize: 15, fontWeight: '600' },
+  historyCard: {
+    borderRadius: 10,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  historyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  historyAddBtn: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  historyFormCard: {
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: 14,
+    marginBottom: 10,
+    gap: 6,
+  },
+  historyFormTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  historyFormLabel: {
+    fontSize: 12,
+    marginTop: 4,
+  },
+  historyFormInput: {
+    height: 44,
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    fontSize: 15,
+  },
+  historyFormActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 8,
+  },
+  historyFormCancel: {
+    flex: 1,
+    height: 40,
+    borderRadius: 8,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  historyFormCancelText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  historyFormSave: {
+    flex: 1,
+    height: 40,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  historyFormSaveText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  historyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  historyActions: {
+    flexDirection: 'row',
+    gap: 6,
+    alignItems: 'center',
+    flexShrink: 0,
+  },
+  historyActionBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  historyActionBtnText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  historyRate: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  historyRateSuffix: {
+    fontSize: 13,
+    fontWeight: '400',
+  },
+  historyPerPeriod: {
+    fontSize: 12,
+    marginTop: 1,
+  },
+  historyDates: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  currentBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  currentBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
 });

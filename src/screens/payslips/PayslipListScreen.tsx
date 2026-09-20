@@ -78,20 +78,21 @@ export function PayslipListScreen({ navigation }: any) {
     const quarters = [0, 0, 0, 0];
 
     for (const p of filteredPayslips) {
-      const net = p.run?.net_pay ?? 0;
-      ytd += net;
+      // Use gross_pay for reporting — it reflects earned pay before cash advance recovery
+      const gross = p.run?.gross_pay ?? 0;
+      ytd += gross;
 
       // Grouping by period_end or generated_at month
       const dateStr = p.run?.period_end || p.generated_at;
       const monthIdx = new Date(dateStr).getMonth();
 
       if (monthIdx === currentMonthIdx) {
-        thisMonth += net;
+        thisMonth += gross;
       }
 
       const qIdx = Math.floor(monthIdx / 3);
       if (qIdx >= 0 && qIdx <= 3) {
-        quarters[qIdx] += net;
+        quarters[qIdx] += gross;
       }
     }
 

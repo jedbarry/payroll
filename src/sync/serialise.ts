@@ -6,6 +6,7 @@ export interface SnapshotTable {
   payroll_runs: any[];
   line_items: any[];
   payslips: any[];
+  pay_history: any[];
 }
 
 export interface Snapshot {
@@ -22,22 +23,24 @@ export async function dumpToSnapshot(): Promise<Snapshot> {
   const payroll_runs = await db.getAllAsync('SELECT * FROM payroll_runs');
   const line_items = await db.getAllAsync('SELECT * FROM line_items');
   const payslips = await db.getAllAsync('SELECT * FROM payslips');
+  const pay_history = await db.getAllAsync('SELECT * FROM pay_history');
 
   return {
     version: 1,
     exportedAt: new Date().toISOString(),
-    tables: { departments, employees, payroll_runs, line_items, payslips },
+    tables: { departments, employees, payroll_runs, line_items, payslips, pay_history },
   };
 }
 
 export async function restoreFromSnapshot(snapshot: Snapshot): Promise<void> {
   const db = getDb();
 
-  const { departments = [], employees = [], payroll_runs = [], line_items = [], payslips = [] } = snapshot.tables;
+  const { departments = [], employees = [], payroll_runs = [], line_items = [], payslips = [], pay_history = [] } = snapshot.tables;
 
   await db.withExclusiveTransactionAsync(async (tx) => {
     // Delete in FK-safe order: children before parents
     await tx.execAsync('DELETE FROM payslips;');
+    await tx.execAsync('DELETE FROM pay_history;');
     await tx.execAsync('DELETE FROM line_items;');
     await tx.execAsync('DELETE FROM payroll_runs;');
     await tx.execAsync('DELETE FROM employees;');
@@ -72,9 +75,9 @@ export async function restoreFromSnapshot(snapshot: Snapshot): Promise<void> {
 
     for (const row of line_items) {
       await tx.runAsync(
-        `INSERT INTO line_items (id, payroll_run_id, type, label, amount)
-         VALUES (?, ?, ?, ?, ?);`,
-        [row.id, row.payroll_run_id, row.type, row.label, row.amount],
+        `INSERT INTO line_items (id, payroll_run_id, type, label, amount, subtype)
+         VALUES (?, ?, ?, ?, ?, ?);`,
+        [row.id, row.payroll_run_id, row.type, row.label, row.amount, row.subtype ?? null],
       );
     }
 
@@ -83,6 +86,14 @@ export async function restoreFromSnapshot(snapshot: Snapshot): Promise<void> {
         `INSERT INTO payslips (id, payroll_run_id, employee_id, generated_at)
          VALUES (?, ?, ?, ?);`,
         [row.id, row.payroll_run_id, row.employee_id, row.generated_at],
+      );
+    }
+
+    for (const row of pay_history) {
+      await tx.runAsync(
+        `INSERT INTO pay_history (id, employee_id, monthly_rate, effective_from, effective_to)
+         VALUES (?, ?, ?, ?, ?);`,
+        [row.id, row.employee_id, row.monthly_rate, row.effective_from, row.effective_to ?? null],
       );
     }
   });

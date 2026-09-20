@@ -2,11 +2,13 @@ import { create } from 'zustand';
 import { Employee } from '../domain/types';
 import {
   getEmployees,
+  getEmployeeById,
   insertEmployee,
   updateEmployee as updateEmployeeQuery,
   archiveEmployee as archiveEmployeeQuery,
   deleteEmployee as deleteEmployeeQuery,
 } from '../db/queries/employees';
+import { closeOpenPayHistory, insertPayHistory } from '../db/queries/payHistory';
 
 export interface EmployeeStore {
   employees: Employee[];
@@ -53,6 +55,20 @@ export const useEmployeeStore = create<EmployeeStore>((set, get) => ({
   updateEmployee: async (id, data) => {
     set({ loading: true });
     try {
+      // If rate is changing, close the current history entry and open a new one
+      if (data.monthly_rate !== undefined) {
+        const existing = await getEmployeeById(id);
+        if (existing && existing.monthly_rate !== data.monthly_rate) {
+          const today = new Date().toISOString().substring(0, 10);
+          await closeOpenPayHistory(id, today);
+          await insertPayHistory({
+            employee_id: id,
+            monthly_rate: data.monthly_rate,
+            effective_from: today,
+            effective_to: null,
+          });
+        }
+      }
       await updateEmployeeQuery(id, data);
       await get().loadEmployees();
     } finally {

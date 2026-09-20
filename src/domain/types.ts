@@ -35,8 +35,17 @@ export interface LineItem {
   id: string;
   payroll_run_id: string;
   type: 'inclusion' | 'deduction';
+  subtype: 'cash_advance' | null;
   label: string;
   amount: number;
+}
+
+export interface PayHistory {
+  id: string;
+  employee_id: string;
+  monthly_rate: number;
+  effective_from: string;
+  effective_to: string | null;
 }
 
 export interface Payslip {

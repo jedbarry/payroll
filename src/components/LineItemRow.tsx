@@ -12,8 +12,11 @@ interface LineItemRowProps {
 export function LineItemRow({ item, onRemove, showRemove = false }: LineItemRowProps) {
   const { theme } = useTheme();
   const isInclusion = item.type === 'inclusion';
+  const isCashAdvance = 'subtype' in item && item.subtype === 'cash_advance';
   const prefix = isInclusion ? '+ ' : '- ';
   const textColor = isInclusion ? theme.inclusion : theme.deduction;
+
+  const typeLabel = isInclusion ? 'Inclusion' : isCashAdvance ? 'Cash Advance' : 'Deduction';
 
   return (
     <View
@@ -28,7 +31,7 @@ export function LineItemRow({ item, onRemove, showRemove = false }: LineItemRowP
       <View style={styles.info}>
         <Text style={[styles.label, { color: theme.text }]}>{item.label}</Text>
         <Text style={[styles.typeText, { color: theme.textMuted }]}>
-          {isInclusion ? 'Inclusion' : 'Deduction'}
+          {typeLabel}
         </Text>
       </View>
       <View style={styles.amountContainer}>

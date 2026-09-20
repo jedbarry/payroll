@@ -144,11 +144,15 @@ export function PayslipDetailScreen({ route, navigation }: any) {
   }
 
   const { run, employee, lineItems } = payslip;
+  const isCashAdvance = (i: typeof lineItems[0]) =>
+    i.subtype === 'cash_advance' || i.label.toLowerCase().includes('cash advance');
   const inclusions = lineItems.filter((i) => i.type === 'inclusion');
-  const deductions = lineItems.filter((i) => i.type === 'deduction');
+  const deductions = lineItems.filter((i) => i.type === 'deduction' && !isCashAdvance(i));
+  const cashAdvances = lineItems.filter((i) => i.type === 'deduction' && isCashAdvance(i));
 
   const totalInclusions = inclusions.reduce((acc, i) => acc + i.amount, 0);
   const totalDeductions = deductions.reduce((acc, i) => acc + i.amount, 0);
+  const totalCashAdvances = cashAdvances.reduce((acc, i) => acc + i.amount, 0);
 
   // Format base pay label calculation description (e.g. "Base Pay (monthly $5,000 ÷ 2)" or "Base Pay")
   let basePaySubtext = '';
@@ -246,6 +250,27 @@ export function PayslipDetailScreen({ route, navigation }: any) {
         </View>
       )}
 
+      {/* Cash Advance Recovery Section */}
+      {cashAdvances.length > 0 && (
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>Cash Advance Recovery</Text>
+          {cashAdvances.map((item) => (
+            <View
+              key={item.id}
+              style={[styles.itemRow, { backgroundColor: theme.surface, borderColor: theme.border }]}
+            >
+              <View style={styles.itemInfo}>
+                <Text style={[styles.itemLabel, { color: theme.text }]}>{item.label}</Text>
+                <Text style={[styles.itemSublabel, { color: theme.textMuted }]}>Already paid — recovered this period</Text>
+              </View>
+              <Text style={[styles.itemAmount, { color: theme.deduction }]}>
+                -{formatCurrency(item.amount)}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
+
       {/* Summary Box */}
       <View
         style={[
@@ -275,6 +300,24 @@ export function PayslipDetailScreen({ route, navigation }: any) {
             -{formatCurrency(totalDeductions)}
           </Text>
         </View>
+
+        {totalCashAdvances > 0 && (
+          <>
+            <View style={[styles.divider, { backgroundColor: theme.border }]} />
+            <View style={styles.summaryRow}>
+              <Text style={[styles.summaryLabel, { color: theme.textMuted }]}>Gross Pay</Text>
+              <Text style={[styles.summaryValue, { color: theme.text }]}>
+                {formatCurrency(run.gross_pay)}
+              </Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={[styles.summaryLabel, { color: theme.textMuted }]}>Cash Advance Recovery</Text>
+              <Text style={[styles.summaryValue, { color: theme.deduction }]}>
+                -{formatCurrency(totalCashAdvances)}
+              </Text>
+            </View>
+          </>
+        )}
 
         <View style={[styles.divider, { backgroundColor: theme.border }]} />
 

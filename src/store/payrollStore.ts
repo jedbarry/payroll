@@ -94,6 +94,7 @@ export const usePayrollStore = create<PayrollStore>((set, get) => ({
         const createdItem = await insertLineItem({
           payroll_run_id: savedRun.id,
           type: item.type,
+          subtype: item.subtype ?? null,
           label: item.label,
           amount: item.amount,
         });
