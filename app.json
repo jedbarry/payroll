@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "payroll",
+    "name": "Payroll",
     "slug": "payroll",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -11,7 +11,8 @@
       "bundleIdentifier": "com.anonymous.payroll",
       "infoPlist": {
         "UIFileSharingEnabled": true,
-        "LSSupportsOpeningDocumentsInPlace": true
+        "LSSupportsOpeningDocumentsInPlace": true,
+        "CFBundleDisplayName": "Payroll"
       }
     },
     "android": {
