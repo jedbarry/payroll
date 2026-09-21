@@ -74,13 +74,20 @@ export function PayslipListScreen({ navigation }: any) {
   // Stats calculations
   const stats = useMemo(() => {
     let ytd = 0;
+    let ytdInclusions = 0;
     let thisMonth = 0;
+    let thisMonthInclusions = 0;
     const quarters = [0, 0, 0, 0];
 
     for (const p of filteredPayslips) {
       // Use gross_pay for reporting — it reflects earned pay before cash advance recovery
       const gross = p.run?.gross_pay ?? 0;
+      const inclusions = (p.lineItems ?? [])
+        .filter((li) => li.type === 'inclusion')
+        .reduce((acc, li) => acc + li.amount, 0);
+
       ytd += gross;
+      ytdInclusions += inclusions;
 
       // Grouping by period_end or generated_at month
       const dateStr = p.run?.period_end || p.generated_at;
@@ -88,6 +95,7 @@ export function PayslipListScreen({ navigation }: any) {
 
       if (monthIdx === currentMonthIdx) {
         thisMonth += gross;
+        thisMonthInclusions += inclusions;
       }
 
       const qIdx = Math.floor(monthIdx / 3);
@@ -96,7 +104,7 @@ export function PayslipListScreen({ navigation }: any) {
       }
     }
 
-    return { ytd, thisMonth, quarters };
+    return { ytd, ytdInclusions, thisMonth, thisMonthInclusions, quarters };
   }, [filteredPayslips, currentMonthIdx]);
 
   // Group payslips by month (11 down to 0)
@@ -189,6 +197,11 @@ export function PayslipListScreen({ navigation }: any) {
               <Text style={[styles.statValueLarge, { color: theme.accent }]}>
                 {formatCurrency(stats.ytd)}
               </Text>
+              {stats.ytdInclusions > 0 && (
+                <Text style={[styles.statSubValue, { color: theme.textMuted }]}>
+                  +{formatCurrency(stats.ytdInclusions)} inclusions
+                </Text>
+              )}
             </View>
             <View style={styles.statBox}>
               <Text style={[styles.statLabel, { color: theme.textMuted }]}>
@@ -197,6 +210,11 @@ export function PayslipListScreen({ navigation }: any) {
               <Text style={[styles.statValueLarge, { color: theme.text }]}>
                 {formatCurrency(stats.thisMonth)}
               </Text>
+              {stats.thisMonthInclusions > 0 && (
+                <Text style={[styles.statSubValue, { color: theme.textMuted }]}>
+                  +{formatCurrency(stats.thisMonthInclusions)} inclusions
+                </Text>
+              )}
             </View>
           </View>
 
@@ -384,6 +402,10 @@ const styles = StyleSheet.create({
   statValueLarge: {
     fontSize: 22,
     fontWeight: '700',
+  },
+  statSubValue: {
+    fontSize: 11,
+    marginTop: 2,
   },
   divider: {
     height: 1,
