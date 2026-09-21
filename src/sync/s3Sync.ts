@@ -27,7 +27,7 @@ export async function exportToS3(config: S3Config): Promise<void> {
     new PutObjectCommand({
       Bucket: config.bucket,
       Key: config.key,
-      Body: body,
+      Body: Buffer.from(body, 'utf-8'),
       ContentType: 'application/json',
     }),
   );

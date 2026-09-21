@@ -219,10 +219,19 @@ export async function importFromFiles(): Promise<boolean> {
     encoding: FileSystem.EncodingType.UTF8,
   });
 
+  let snapshot: Snapshot;
+  try {
+    snapshot = JSON.parse(text);
+  } catch {
+    throw new Error('Selected file is not valid JSON. Restore aborted.');
+  }
+  if (!snapshot?.tables) {
+    throw new Error('Selected file is not a valid backup. Restore aborted.');
+  }
+
   await saveLocalBackupFile(text, `payroll-import-${Date.now()}.json`);
   await saveLocalBackupFile(text, BACKUP_FILENAME);
 
-  const snapshot: Snapshot = JSON.parse(text);
   await restoreFromSnapshot(snapshot);
   return true;
 }

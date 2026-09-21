@@ -14,7 +14,7 @@ export interface EmployeeStore {
   employees: Employee[];
   allEmployees: Employee[];
   loading: boolean;
-  loadEmployees: (includeInactive?: boolean) => Promise<void>;
+  loadEmployees: () => Promise<void>;
   addEmployee: (data: Omit<Employee, 'id' | 'created_at' | 'is_active'>) => Promise<Employee>;
   updateEmployee: (id: string, data: Partial<Omit<Employee, 'id' | 'created_at'>>) => Promise<void>;
   archiveEmployee: (id: string) => Promise<void>;
@@ -26,7 +26,7 @@ export const useEmployeeStore = create<EmployeeStore>((set, get) => ({
   allEmployees: [],
   loading: false,
 
-  loadEmployees: async (includeInactive = false) => {
+  loadEmployees: async () => {
     set({ loading: true });
     try {
       const activeList = await getEmployees(false);
@@ -90,7 +90,7 @@ export const useEmployeeStore = create<EmployeeStore>((set, get) => ({
     set({ loading: true });
     try {
       await deleteEmployeeQuery(id);
-      await get().loadEmployees(true);
+      await get().loadEmployees();
     } finally {
       set({ loading: false });
     }

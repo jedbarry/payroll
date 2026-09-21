@@ -107,7 +107,6 @@ export function DatePickerField({ label, hint, value, onChange, placeholder = 'N
           mode="date"
           display="default"
           onValueChange={handleValueChange}
-          onDismiss={handleDismiss}
         />
       )}
 

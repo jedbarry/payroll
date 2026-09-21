@@ -226,7 +226,7 @@ export function EmployeeFormScreen({ route, navigation }: any) {
       if (effectiveTo === null) {
         await updateEmployeeQuery(employeeId, { monthly_rate: rate });
         setMonthlyRate(rate.toString());
-        await loadEmployees(true);
+        await loadEmployees();
       }
       setHistoryFormMode(null);
       reloadHistory();
@@ -260,7 +260,7 @@ export function EmployeeFormScreen({ route, navigation }: any) {
       await updateEmployeeQuery(employeeId, { monthly_rate: entry.monthly_rate });
       setMonthlyRate(entry.monthly_rate.toString());
       // Refresh store so Resources list and any other screen shows updated rate
-      await loadEmployees(true);
+      await loadEmployees();
       reloadHistory();
     } catch (err: any) {
       Alert.alert('Error', err.message || 'Failed to update.');

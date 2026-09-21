@@ -15,6 +15,19 @@ import * as Sharing from 'expo-sharing';
 import { useTheme } from '../../theme/ThemeContext';
 import { restoreDeviceBackup } from '../../sync/fileBackup';
 
+function useFileSize(uri: string): string | null {
+  const [size, setSize] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    FileSystem.getInfoAsync(uri, { size: true }).then((info) => {
+      if (info.exists && 'size' in info && info.size) {
+        const kb = info.size / 1024;
+        setSize(kb < 1024 ? `${kb.toFixed(1)} KB` : `${(kb / 1024).toFixed(2)} MB`);
+      }
+    }).catch(() => {});
+  }, [uri]);
+  return size;
+}
+
 export function BackupDetailScreen({ route, navigation }: any) {
   const { theme } = useTheme();
   const { entry } = route.params;
@@ -172,19 +185,6 @@ function Row({ label, value, theme }: { label: string; value: string; theme: any
       <Text style={[styles.rowValue, { color: theme.text }]}>{value}</Text>
     </View>
   );
-}
-
-function useFileSize(uri: string): string | null {
-  const [size, setSize] = React.useState<string | null>(null);
-  React.useEffect(() => {
-    FileSystem.getInfoAsync(uri, { size: true }).then((info) => {
-      if (info.exists && 'size' in info && info.size) {
-        const kb = info.size / 1024;
-        setSize(kb < 1024 ? `${kb.toFixed(1)} KB` : `${(kb / 1024).toFixed(2)} MB`);
-      }
-    }).catch(() => {});
-  }, [uri]);
-  return size;
 }
 
 function formatBackupDate(iso: string): string {

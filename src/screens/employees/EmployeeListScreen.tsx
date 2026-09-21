@@ -59,10 +59,10 @@ export function EmployeeListScreen({ navigation }: any) {
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      loadEmployees(true);
+      loadEmployees();
       loadDepartments();
     });
-    loadEmployees(true);
+    loadEmployees();
     loadDepartments();
     return unsubscribe;
   }, [navigation, loadEmployees, loadDepartments]);

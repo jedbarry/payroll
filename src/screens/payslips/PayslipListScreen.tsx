@@ -63,7 +63,7 @@ export function PayslipListScreen({ navigation }: any) {
     loadPayslipsForYear(selectedYear);
     loadEmployees();
     return unsubscribe;
-  }, [navigation]);
+  }, [navigation, selectedYear, loadPayslipsForYear, loadAvailableYears, loadEmployees]);
 
   // Filtered payslips
   const filteredPayslips = useMemo(() => {

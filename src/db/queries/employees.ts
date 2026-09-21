@@ -143,7 +143,7 @@ export async function archiveEmployee(id: string): Promise<boolean> {
 
 export async function deleteEmployee(id: string): Promise<void> {
   const db = getDb();
-  // Delete in FK-safe order: payslips → line_items → payroll_runs → employee
+  // Delete in FK-safe order: payslips → line_items → payroll_runs → pay_history → employee
   await db.runAsync(
     `DELETE FROM payslips WHERE employee_id = ?;`,
     [id],
@@ -157,5 +157,6 @@ export async function deleteEmployee(id: string): Promise<void> {
     `DELETE FROM payroll_runs WHERE employee_id = ?;`,
     [id],
   );
+  await db.runAsync(`DELETE FROM pay_history WHERE employee_id = ?;`, [id]);
   await db.runAsync(`DELETE FROM employees WHERE id = ?;`, [id]);
 }
