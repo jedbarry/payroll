@@ -40,6 +40,7 @@ export function PayslipCard({ payslip, onPress }: PayslipCardProps) {
   const { theme } = useTheme();
   const initials = getInitials(payslip.employee?.name || 'EM');
   const scheduleLabel = formatSchedule(payslip.employee?.pay_schedule || 'monthly');
+  const isInactive = payslip.employee?.is_active === false;
 
   return (
     <TouchableOpacity
@@ -48,6 +49,7 @@ export function PayslipCard({ payslip, onPress }: PayslipCardProps) {
         {
           backgroundColor: theme.surface,
           borderColor: theme.border,
+          opacity: isInactive ? 0.6 : 1,
         },
       ]}
       onPress={onPress}
@@ -55,10 +57,17 @@ export function PayslipCard({ payslip, onPress }: PayslipCardProps) {
     >
       <View style={styles.leftRow}>
         <View style={[styles.avatar, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
-          <Text style={[styles.avatarText, { color: theme.accent }]}>{initials}</Text>
+          <Text style={[styles.avatarText, { color: isInactive ? theme.textMuted : theme.accent }]}>{initials}</Text>
         </View>
         <View style={styles.info}>
-          <Text style={[styles.name, { color: theme.text }]}>{payslip.employee?.name}</Text>
+          <View style={styles.nameRow}>
+            <Text style={[styles.name, { color: theme.text }]}>{payslip.employee?.name}</Text>
+            {isInactive && (
+              <View style={[styles.inactiveBadge, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}>
+                <Text style={[styles.inactiveBadgeText, { color: theme.textMuted }]}>Inactive</Text>
+              </View>
+            )}
+          </View>
           <Text style={[styles.period, { color: theme.textMuted }]}>
             {payslip.run?.period_start} – {payslip.run?.period_end}
           </Text>
@@ -106,8 +115,23 @@ const styles = StyleSheet.create({
   info: {
     flex: 1,
   },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   name: {
     fontSize: 15,
+    fontWeight: '600',
+  },
+  inactiveBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+    borderWidth: 1,
+  },
+  inactiveBadgeText: {
+    fontSize: 10,
     fontWeight: '600',
   },
   period: {

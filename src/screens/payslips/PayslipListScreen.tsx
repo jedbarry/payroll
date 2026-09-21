@@ -89,8 +89,8 @@ export function PayslipListScreen({ navigation }: any) {
       ytd += gross;
       ytdInclusions += inclusions;
 
-      // Grouping by period_end or generated_at month
-      const dateStr = p.run?.period_end || p.generated_at;
+      // Grouping by period_start (determines which pay period month this belongs to)
+      const dateStr = p.run?.period_start || p.generated_at;
       const monthIdx = new Date(dateStr).getMonth();
 
       if (monthIdx === currentMonthIdx) {
@@ -115,26 +115,36 @@ export function PayslipListScreen({ navigation }: any) {
     }
 
     for (const p of filteredPayslips) {
-      const dateStr = p.run?.period_end || p.generated_at;
+      const dateStr = p.run?.period_start || p.generated_at;
       const monthIdx = new Date(dateStr).getMonth();
       if (groups[monthIdx]) {
         groups[monthIdx].push(p);
       }
     }
 
-    // Sort each month latest-first by period_end, then by employee name
+    // Sort each month latest-first by period_end, then by active status, then by employee name
     for (const m of Object.keys(groups)) {
       groups[+m].sort((a, b) => {
-        const aDate = a.run?.period_end || a.generated_at;
-        const bDate = b.run?.period_end || b.generated_at;
+        const aDate = a.run?.period_start || a.generated_at;
+        const bDate = b.run?.period_start || b.generated_at;
         const dateCmp = bDate.localeCompare(aDate);
         if (dateCmp !== 0) return dateCmp;
+        const aActive = a.employee?.is_active ? 1 : 0;
+        const bActive = b.employee?.is_active ? 1 : 0;
+        if (aActive !== bActive) return bActive - aActive;
         return (a.employee?.name ?? '').localeCompare(b.employee?.name ?? '');
       });
     }
 
     return groups;
   }, [filteredPayslips]);
+
+  // Sorted employee filter pills: active first sorted by name, then inactive sorted by name
+  const sortedEmployees = useMemo(() => {
+    const active = allEmployees.filter((e) => e.is_active).sort((a, b) => a.name.localeCompare(b.name));
+    const inactive = allEmployees.filter((e) => !e.is_active).sort((a, b) => a.name.localeCompare(b.name));
+    return [...active, ...inactive];
+  }, [allEmployees]);
 
   // For current year: only show months up to today. For past years: show all 12.
   const maxMonthIdx = selectedYear === currentYear ? currentMonthIdx : 11;
@@ -282,16 +292,22 @@ export function PayslipListScreen({ navigation }: any) {
             </Text>
           </TouchableOpacity>
 
-          {allEmployees.map((emp) => {
+          {sortedEmployees.map((emp) => {
             const isSelected = selectedEmployeeId === emp.id;
+            const isInactive = !emp.is_active;
             return (
               <TouchableOpacity
                 key={emp.id}
                 style={[
                   styles.filterPill,
                   {
-                    backgroundColor: isSelected ? theme.accent : theme.surface,
+                    backgroundColor: isSelected
+                      ? isInactive
+                        ? theme.textMuted
+                        : theme.accent
+                      : theme.surface,
                     borderColor: theme.border,
+                    opacity: isInactive && !isSelected ? 0.6 : 1,
                   },
                 ]}
                 onPress={() => setSelectedEmployeeId(emp.id)}
@@ -299,10 +315,16 @@ export function PayslipListScreen({ navigation }: any) {
                 <Text
                   style={[
                     styles.filterPillText,
-                    { color: isSelected ? theme.accentText : theme.text },
+                    {
+                      color: isSelected
+                        ? theme.accentText
+                        : isInactive
+                        ? theme.textMuted
+                        : theme.text,
+                    },
                   ]}
                 >
-                  {emp.name}
+                  {emp.name}{isInactive ? ' (Inactive)' : ''}
                 </Text>
               </TouchableOpacity>
             );
