@@ -232,14 +232,25 @@ export function PayslipListScreen({ navigation }: any) {
           {/* Divider */}
           <View style={[styles.divider, { backgroundColor: theme.border }]} />
 
-          {/* Q1-Q4 Row */}
-          <View style={styles.quarterRow}>
-            {['Q1', 'Q2', 'Q3', 'Q4'].map((q, idx) => (
-              <View key={q} style={styles.quarterBox}>
-                <Text style={[styles.quarterLabel, { color: theme.textMuted }]}>{q}</Text>
-                <Text style={[styles.quarterValue, { color: theme.text }]}>
-                  {formatCurrency(stats.quarters[idx])}
-                </Text>
+          {/* Q1-Q4 Grid (2x2) */}
+          <View style={styles.quarterGrid}>
+            {[
+              ['Q1', 0, 'Q2', 1],
+              ['Q3', 2, 'Q4', 3],
+            ].map(([qA, idxA, qB, idxB], rowIdx) => (
+              <View key={rowIdx} style={styles.quarterRow}>
+                <View style={styles.quarterBox}>
+                  <Text style={[styles.quarterLabel, { color: theme.textMuted }]}>{qA as string}</Text>
+                  <Text style={[styles.quarterValue, { color: theme.text }]}>
+                    {formatCurrency(stats.quarters[idxA as number])}
+                  </Text>
+                </View>
+                <View style={styles.quarterBox}>
+                  <Text style={[styles.quarterLabel, { color: theme.textMuted }]}>{qB as string}</Text>
+                  <Text style={[styles.quarterValue, { color: theme.text }]}>
+                    {formatCurrency(stats.quarters[idxB as number])}
+                  </Text>
+                </View>
               </View>
             ))}
           </View>
@@ -422,9 +433,12 @@ const styles = StyleSheet.create({
     height: 1,
     marginBottom: 12,
   },
+  quarterGrid: {
+    gap: 10,
+  },
   quarterRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 12,
   },
   quarterBox: {
     flex: 1,
