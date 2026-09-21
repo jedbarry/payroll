@@ -144,8 +144,6 @@ export async function restoreFromPicker(): Promise<boolean> {
   return true;
 }
 
-// ─── legacy helpers (used by S3 sync) ─────────────────────────────────────
-
 export async function saveLocalBackupFile(jsonString: string, filename = BACKUP_FILENAME): Promise<string | null> {
   if (Platform.OS === 'web') {
     if (typeof localStorage !== 'undefined') {
@@ -164,25 +162,6 @@ export async function saveLocalBackupFile(jsonString: string, filename = BACKUP_
   return fileUri;
 }
 
-export async function readLocalBackupFile(filename = BACKUP_FILENAME): Promise<string | null> {
-  if (Platform.OS === 'web') {
-    if (typeof localStorage !== 'undefined') {
-      return localStorage.getItem(`local_file_${filename}`);
-    }
-    return null;
-  }
-
-  const docDir = FileSystem.documentDirectory;
-  if (!docDir) return null;
-
-  const fileUri = `${docDir}${filename}`;
-  const info = await FileSystem.getInfoAsync(fileUri);
-  if (!info.exists) return null;
-
-  return await FileSystem.readAsStringAsync(fileUri, {
-    encoding: FileSystem.EncodingType.UTF8,
-  });
-}
 
 export async function exportToFiles(): Promise<void> {
   const snapshot = await dumpToSnapshot();
