@@ -83,7 +83,7 @@ export function PayslipListScreen({ navigation }: any) {
       // Use gross_pay for reporting — it reflects earned pay before cash advance recovery
       const gross = p.run?.gross_pay ?? 0;
       const inclusions = (p.lineItems ?? [])
-        .filter((li) => li.type === 'inclusion')
+        .filter((li) => li.type === 'inclusion' && li.label.toLowerCase() !== 'base pay')
         .reduce((acc, li) => acc + li.amount, 0);
 
       ytd += gross;
