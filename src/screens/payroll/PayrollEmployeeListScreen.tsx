@@ -27,8 +27,8 @@ export function PayrollEmployeeListScreen({ navigation }: any) {
   const active = allEmployees.filter((e) => e.is_active);
   const archived = allEmployees.filter((e) => !e.is_active);
   const sections: Array<{ title: string; data: Employee[] }> = [];
-  if (active.length > 0) sections.push({ title: 'Active', data: active });
-  if (archived.length > 0) sections.push({ title: 'Archived', data: archived });
+  if (active.length > 0) sections.push({ title: 'Active Payroll', data: active });
+  if (archived.length > 0) sections.push({ title: 'Inactive Payroll', data: archived });
 
   const flatData: Array<Employee | { sectionTitle: string }> = [];
   for (const s of sections) {
@@ -66,7 +66,7 @@ export function PayrollEmployeeListScreen({ navigation }: any) {
       >
         <View style={styles.cardRow}>
           <View style={styles.cardLeft}>
-            <Text style={[styles.name, { color: theme.text }]}>{item.name}</Text>
+            <Text style={[styles.name, { color: theme.text }]}>{item.name} Payroll</Text>
             <Text style={[styles.sub, { color: theme.textMuted }]}>
               {scheduleLabel(item.pay_schedule)}
               {item.start_date ? ` · from ${item.start_date}` : ''}

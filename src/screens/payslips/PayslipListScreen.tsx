@@ -122,6 +122,17 @@ export function PayslipListScreen({ navigation }: any) {
       }
     }
 
+    // Sort each month latest-first by period_end, then by employee name
+    for (const m of Object.keys(groups)) {
+      groups[+m].sort((a, b) => {
+        const aDate = a.run?.period_end || a.generated_at;
+        const bDate = b.run?.period_end || b.generated_at;
+        const dateCmp = bDate.localeCompare(aDate);
+        if (dateCmp !== 0) return dateCmp;
+        return (a.employee?.name ?? '').localeCompare(b.employee?.name ?? '');
+      });
+    }
+
     return groups;
   }, [filteredPayslips]);
 
@@ -199,7 +210,7 @@ export function PayslipListScreen({ navigation }: any) {
               </Text>
               {stats.ytdInclusions > 0 && (
                 <Text style={[styles.statSubValue, { color: theme.textMuted }]}>
-                  +{formatCurrency(stats.ytdInclusions)} inclusions
+                  {formatCurrency(stats.ytdInclusions)} inclusions
                 </Text>
               )}
             </View>
@@ -212,7 +223,7 @@ export function PayslipListScreen({ navigation }: any) {
               </Text>
               {stats.thisMonthInclusions > 0 && (
                 <Text style={[styles.statSubValue, { color: theme.textMuted }]}>
-                  +{formatCurrency(stats.thisMonthInclusions)} inclusions
+                  {formatCurrency(stats.thisMonthInclusions)} inclusions
                 </Text>
               )}
             </View>
