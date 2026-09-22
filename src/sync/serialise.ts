@@ -83,9 +83,9 @@ export async function restoreFromSnapshot(snapshot: Snapshot): Promise<void> {
 
     for (const row of payslips) {
       await tx.runAsync(
-        `INSERT INTO payslips (id, payroll_run_id, employee_id, generated_at)
-         VALUES (?, ?, ?, ?);`,
-        [row.id, row.payroll_run_id, row.employee_id, row.generated_at],
+        `INSERT INTO payslips (id, payroll_run_id, employee_id, generated_at, signature_data, signed_at)
+         VALUES (?, ?, ?, ?, ?, ?);`,
+        [row.id, row.payroll_run_id, row.employee_id, row.generated_at, row.signature_data ?? null, row.signed_at ?? null],
       );
     }
 

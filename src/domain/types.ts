@@ -53,6 +53,8 @@ export interface Payslip {
   payroll_run_id: string;
   employee_id: string;
   generated_at: string;
+  signature_data: string | null;
+  signed_at: string | null;
 }
 
 export interface PayslipView extends Payslip {

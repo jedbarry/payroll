@@ -47,19 +47,17 @@ export function PayrollRunListScreen({ route, navigation }: any) {
     return unsubscribe;
   }, [navigation, employeeId, loadRunsForEmployee]);
 
-  // Auto-generate a draft once on mount — only if the period has already started
+  // Auto-generate drafts on mount for all historical periods that have no run yet
   useEffect(() => {
     let cancelled = false;
 
     async function initRuns() {
       if (!employeeId) return;
 
-      const existing = await getPayrollRunsByEmployee(employeeId);
-      if (existing.some((r) => r.status === 'draft')) return;
-
       const emp = await getEmployeeById(employeeId);
-      if (!emp || !emp.is_active) return;
+      if (!emp) return;
 
+      const existing = await getPayrollRunsByEmployee(employeeId);
       const existingPeriodKeys = new Set(existing.map((r) => `${r.period_start}_${r.period_end}`));
 
       const now = new Date();
@@ -67,40 +65,39 @@ export function PayrollRunListScreen({ route, navigation }: any) {
       const currentYear = now.getFullYear();
       const startYear = emp.start_date ? parseInt(emp.start_date.substring(0, 4), 10) : currentYear;
 
-      // Find the most recent period that has started (start <= today) and has no run yet
-      let period: { start: string; end: string; month: number; year: number } | null = null;
-      outer: for (let yr = currentYear; yr >= startYear; yr--) {
-        for (let m = 11; m >= 0; m--) {
+      // Collect all periods from start_date through today that have no run yet
+      const missing: Array<{ start: string; end: string; month: number; year: number }> = [];
+      for (let yr = startYear; yr <= currentYear; yr++) {
+        for (let m = 0; m < 12; m++) {
           const periods = getPayPeriods(emp.pay_schedule, emp.pay_day_config, m, yr);
-          for (const p of [...periods].reverse()) {
+          for (const p of periods) {
             if (emp.start_date && p.end < emp.start_date) continue;
             if (emp.archive_date && p.start > emp.archive_date) continue;
             if (existingPeriodKeys.has(`${p.start}_${p.end}`)) continue;
-            if (p.start <= todayStr) {
-              period = { ...p, month: m, year: yr };
-              break outer;
-            }
+            if (p.start > todayStr) continue; // skip future periods
+            missing.push({ ...p, month: m, year: yr });
           }
         }
       }
 
-      if (!period || cancelled) return;
-
-      const historicalRate =
-        (await getRateForPeriod(employeeId, period.start)) ?? emp.monthly_rate;
-      const base = getBaseAmount(historicalRate, emp.pay_schedule, period.month, period.year);
-      await saveDraft(
-        {
-          employee_id: employeeId,
-          period_start: period.start,
-          period_end: period.end,
-          base_amount: base,
-          gross_pay: base,
-          net_pay: base,
-          status: 'draft',
-        },
-        [],
-      );
+      for (const period of missing) {
+        if (cancelled) return;
+        const historicalRate =
+          (await getRateForPeriod(employeeId, period.start)) ?? emp.monthly_rate;
+        const base = getBaseAmount(historicalRate, emp.pay_schedule, period.month, period.year);
+        await saveDraft(
+          {
+            employee_id: employeeId,
+            period_start: period.start,
+            period_end: period.end,
+            base_amount: base,
+            gross_pay: base,
+            net_pay: base,
+            status: 'draft',
+          },
+          [],
+        );
+      }
     }
 
     initRuns();

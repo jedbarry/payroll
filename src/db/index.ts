@@ -6,6 +6,8 @@ import {
   MIGRATE_EMPLOYEES_ADD_ARCHIVE_DATE,
   MIGRATE_LINE_ITEMS_ADD_SUBTYPE,
   MIGRATE_BACKFILL_PAY_HISTORY,
+  MIGRATE_PAYSLIPS_ADD_SIGNATURE,
+  MIGRATE_PAYSLIPS_ADD_SIGNED_AT,
 } from './schema';
 
 let dbInstance: SQLite.SQLiteDatabase | null = null;
@@ -28,6 +30,8 @@ export async function initDb(): Promise<SQLite.SQLiteDatabase> {
     MIGRATE_EMPLOYEES_ADD_START_DATE,
     MIGRATE_EMPLOYEES_ADD_ARCHIVE_DATE,
     MIGRATE_LINE_ITEMS_ADD_SUBTYPE,
+    MIGRATE_PAYSLIPS_ADD_SIGNATURE,
+    MIGRATE_PAYSLIPS_ADD_SIGNED_AT,
   ]) {
     try {
       await db.execAsync(migration);

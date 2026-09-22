@@ -103,6 +103,14 @@ WHERE NOT EXISTS (
 );
 `;
 
+export const MIGRATE_PAYSLIPS_ADD_SIGNATURE = `
+ALTER TABLE payslips ADD COLUMN signature_data TEXT;
+`;
+
+export const MIGRATE_PAYSLIPS_ADD_SIGNED_AT = `
+ALTER TABLE payslips ADD COLUMN signed_at TEXT;
+`;
+
 export const ALL_SCHEMAS = [
   CREATE_DEPARTMENTS_TABLE,
   CREATE_EMPLOYEES_TABLE,

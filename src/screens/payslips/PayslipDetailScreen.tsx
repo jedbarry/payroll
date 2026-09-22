@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,11 +7,13 @@ import {
   ActivityIndicator,
   Alert,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import SignatureCanvas from 'react-native-signature-canvas';
 import { useTheme } from '../../theme/ThemeContext';
-import { getPayslipById } from '../../db/queries/payslips';
+import { getPayslipById, savePayslipSignature } from '../../db/queries/payslips';
 import { getPayrollRunById } from '../../db/queries/payrollRuns';
 import { getEmployeeById } from '../../db/queries/employees';
 import { getLineItemsByRun } from '../../db/queries/lineItems';
@@ -40,7 +42,31 @@ export function PayslipDetailScreen({ route, navigation }: any) {
 
   const [payslip, setPayslip] = useState<PayslipView | null>(null);
   const [loading, setLoading] = useState(true);
+  const [signing, setSigning] = useState(false);
+  const [savingSignature, setSavingSignature] = useState(false);
+  const signatureRef = useRef<any>(null);
+  const scrollViewRef = useRef<any>(null);
+  const signatureSectionY = useRef<number>(0);
   const { deletePayslipAndRevertRun } = usePayslipStore();
+
+  const handleSignatureOK = async (sig: string) => {
+    if (!payslip) return;
+    setSavingSignature(true);
+    try {
+      await savePayslipSignature(payslip.id, sig);
+      const signed_at = new Date().toISOString();
+      setPayslip((prev) => (prev ? { ...prev, signature_data: sig, signed_at } : prev));
+      setSigning(false);
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to save signature');
+    } finally {
+      setSavingSignature(false);
+    }
+  };
+
+  const handleSignatureEmpty = () => {
+    Alert.alert('Empty Signature', 'Please draw your signature before saving.');
+  };
 
   const handleDelete = () => {
     Alert.alert(
@@ -179,7 +205,7 @@ export function PayslipDetailScreen({ route, navigation }: any) {
           <View style={{ width: 28 }} />
         </View>
       </SafeAreaView>
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.content}>
+    <ScrollView ref={scrollViewRef} style={{ flex: 1 }} contentContainerStyle={styles.content} scrollEnabled={!signing}>
       {/* Header Card */}
       <View style={[styles.headerCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
         <Text style={[styles.employeeName, { color: theme.text }]}>{employee.name}</Text>
@@ -327,6 +353,96 @@ export function PayslipDetailScreen({ route, navigation }: any) {
             {formatCurrency(run.net_pay)}
           </Text>
         </View>
+      </View>
+
+      {/* Signature Section */}
+      <View
+        style={[styles.signatureSection, { borderColor: theme.border }]}
+        onLayout={(e) => { signatureSectionY.current = e.nativeEvent.layout.y; }}
+      >
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>Employee Signature</Text>
+
+        {payslip.signature_data ? (
+          // Already signed — show the captured image, locked
+          <View style={[styles.signedBox, { borderColor: theme.border, backgroundColor: theme.surface }]}>
+            <Image
+              source={{ uri: payslip.signature_data }}
+              style={styles.signatureImage}
+              resizeMode="contain"
+            />
+            <View style={styles.signedBadgeRow}>
+              <Ionicons name="checkmark-circle" size={15} color={theme.badgeCommittedText} />
+              <Text style={[styles.signedBadgeText, { color: theme.badgeCommittedText }]}>
+                Signed
+                {payslip.signed_at
+                  ? ` · ${new Date(payslip.signed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+                  : ''}
+              </Text>
+            </View>
+          </View>
+        ) : signing ? (
+          // Canvas open
+          <View>
+            <View style={[styles.canvasWrapper, { borderColor: theme.border }]}>
+              <SignatureCanvas
+                ref={signatureRef}
+                onOK={handleSignatureOK}
+                onEmpty={handleSignatureEmpty}
+                descriptionText=""
+                clearText=""
+                confirmText=""
+                webStyle={`
+                  .m-signature-pad { box-shadow: none; border: none; }
+                  .m-signature-pad--body { border: none; }
+                  .m-signature-pad--footer { display: none; }
+                `}
+              />
+            </View>
+            {/* Native buttons — always visible, no scrolling needed */}
+            <View style={styles.signatureActions}>
+              <TouchableOpacity
+                style={[styles.signActionBtn, { borderColor: theme.border }]}
+                onPress={() => signatureRef.current?.clearSignature()}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.signActionText, { color: theme.textMuted }]}>Clear</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.signActionBtn, styles.signActionBtnPrimary, { backgroundColor: theme.accent, borderColor: theme.accent }]}
+                onPress={() => signatureRef.current?.readSignature()}
+                activeOpacity={0.7}
+                disabled={savingSignature}
+              >
+                <Text style={[styles.signActionText, { color: '#fff' }]}>
+                  {savingSignature ? 'Saving…' : 'Save Signature'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity
+              style={[styles.cancelSignButton, { borderColor: theme.border }]}
+              onPress={() => setSigning(false)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.cancelSignText, { color: theme.textMuted }]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          // Prompt to sign
+          <TouchableOpacity
+            style={[styles.signButton, { borderColor: theme.accent }]}
+            onPress={() => {
+              setSigning(true);
+              setTimeout(() => {
+                scrollViewRef.current?.scrollTo({ y: signatureSectionY.current, animated: true });
+              }, 50);
+            }}
+            activeOpacity={0.7}
+            disabled={savingSignature}
+          >
+            <Ionicons name="create-outline" size={18} color={theme.accent} />
+            <Text style={[styles.signButtonText, { color: theme.accent }]}>Tap to Sign</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Footer Metadata */}
@@ -479,6 +595,79 @@ const styles = StyleSheet.create({
   summaryTotalValue: {
     fontSize: 18,
     fontWeight: '800',
+  },
+  signatureSection: {
+    marginBottom: 20,
+    borderTopWidth: 1,
+    paddingTop: 20,
+  },
+  signButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 48,
+    borderRadius: 10,
+    borderWidth: 1.5,
+  },
+  signButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  canvasWrapper: {
+    height: 260,
+    borderRadius: 10,
+    borderWidth: 1,
+    overflow: 'hidden',
+    marginBottom: 10,
+  },
+  signatureActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 10,
+  },
+  signActionBtn: {
+    flex: 1,
+    height: 44,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  signActionBtnPrimary: {},
+  signActionText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  cancelSignButton: {
+    height: 40,
+    borderRadius: 8,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cancelSignText: {
+    fontSize: 14,
+  },
+  signedBox: {
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: 12,
+    alignItems: 'center',
+  },
+  signatureImage: {
+    width: '100%',
+    height: 140,
+  },
+  signedBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 8,
+  },
+  signedBadgeText: {
+    fontSize: 12,
+    fontWeight: '500',
   },
   deleteButton: {
     marginHorizontal: 16,
